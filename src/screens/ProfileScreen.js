@@ -378,7 +378,8 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
           <img
             src="../../Logo/MainLogo.png"
             alt="Main Logo"
-            style={{ height: isMobile ? 40 : 50, marginRight: 12, objectFit: "contain", background: "white", borderRadius: 4 }}
+            style={{ height: isMobile ? 40 : 50, marginRight: 12, objectFit: "contain", background: "white", borderRadius: 4, cursor: "pointer" }}
+            onClick={() => navigate("/home")}
           />
           <h1 style={styles.title}>Profile</h1>
           <div style={styles.rightArea}>
@@ -424,6 +425,19 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
                   >
                     <span style={{ width: 18, textAlign: "center" }}>📋</span>
                     <span>Details</span>
+                  </div>
+
+                  <div
+                    onClick={() => {
+                      setProfileOpen(false)
+                      window.open("https://forms.office.com/Pages/ResponsePage.aspx?id=YHed29djiE-ZJ_q-RG4jYu30tAiE4QZGndZ48sb8fWhUOTAxN0RFT0RCRzVXUDZYWEc1RUhORE1RSi4u&fswReload=1&fswNavStart=1764070424016", "_blank")
+                    }}
+                    style={styles.profileMenuItem}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f8ff")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <span style={{ width: 18, textAlign: "center" }}>💬</span>
+                    <span>Feedback</span>
                   </div>
 
                   {/* <div

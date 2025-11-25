@@ -447,6 +447,19 @@ export default function HomeScreen({ onLogout, employee }) {
                 <div
                   onClick={() => {
                     setProfileOpen(false)
+                    window.open("https://forms.office.com/Pages/ResponsePage.aspx?id=YHed29djiE-ZJ_q-RG4jYu30tAiE4QZGndZ48sb8fWhUOTAxN0RFT0RCRzVXUDZYWEc1RUhORE1RSi4u&fswReload=1&fswNavStart=1764070424016", "_blank")
+                  }}
+                  style={styles.profileMenuItem}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f8ff")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <span style={{ width: 18, textAlign: "center" }}>💬</span>
+                  <span>Feedback</span>
+                </div>
+
+                <div
+                  onClick={() => {
+                    setProfileOpen(false)
                     onLogout && onLogout()
                   }}
                   style={styles.profileMenuItem}

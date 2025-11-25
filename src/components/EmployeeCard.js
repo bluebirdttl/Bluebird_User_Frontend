@@ -33,7 +33,7 @@ export default function EmployeeCard({ employee = {}, getInitials }) {
       try {
         const parsed = JSON.parse(val)
         if (Array.isArray(parsed)) return parsed.filter(Boolean)
-      } catch {}
+      } catch { }
       const sep = val.includes(",") ? "," : val.includes(";") ? ";" : null
       if (sep) return val.split(sep).map((s) => s.trim()).filter(Boolean)
       return val.trim() ? [val.trim()] : []
@@ -62,7 +62,7 @@ export default function EmployeeCard({ employee = {}, getInitials }) {
         const [year, month, day] = parts
         return `${day}-${month}-${year}`
       }
-    } catch {}
+    } catch { }
     return dateStr
   }
 
@@ -285,35 +285,55 @@ export default function EmployeeCard({ employee = {}, getInitials }) {
   // Inline icons
   const IconBriefcase = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M10 3h4a1 1 0 0 1 1 1v1h3a1 1 0 0 1 1 1v3H3V6a1 1 0 0 1 1-1h3V4a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M21 11v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M8 13h8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10 3h4a1 1 0 0 1 1 1v1h3a1 1 0 0 1 1 1v3H3V6a1 1 0 0 1 1-1h3V4a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M21 11v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 13h8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 
   const IconPin = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M21 10c0 6-9 13-9 13S3 16 3 10a9 9 0 1 1 18 0z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M12 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" fill="currentColor"/>
+      <path d="M21 10c0 6-9 13-9 13S3 16 3 10a9 9 0 1 1 18 0z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" fill="currentColor" />
     </svg>
   )
 
   const IconMail = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M3 7.5v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M21 7.5l-9 6-9-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M3 7.5v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M21 7.5l-9 6-9-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 
   const IconClock = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M12 7v6l3 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M12 7v6l3 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 
   const statusKey = (availability || "").toString().toLowerCase()
-  const statusColor = statusKey === "available" ? "#2e7d32" : statusKey === "occupied" ? "#d32f2f" : "#f57c00"
+
+  // Calculate staleness
+  let isStale = false
+  if (updated_at) {
+    const dt = parseToDate(updated_at)
+    if (dt) {
+      const now = new Date()
+      const diffDays = Math.floor((now.getTime() - dt.getTime()) / (1000 * 60 * 60 * 24))
+      if (diffDays > 15) isStale = true
+    }
+  }
+
+  // Color logic: Muted/Professional colors
+  const statusColor = isStale
+    ? "#5c93bb" // Muted Blue
+    : statusKey === "available"
+      ? "#66bb6a" // Soft Green
+      : statusKey === "occupied"
+        ? "#ef5350" // Soft Red
+        : "#fbc02d" // Muted Yellow/Gold
+
   const isPartial = statusKey === "partially available" || statusKey === "partially" || statusKey === "partial"
 
   return (
@@ -330,6 +350,9 @@ export default function EmployeeCard({ employee = {}, getInitials }) {
       onKeyDown={(e) => (e.key === "Enter" || e.key === " " ? handleCardClick(e) : null)}
       aria-expanded={expanded}
     >
+      {/* Availability Strip - Thinner & Rounded Top */}
+      <div style={{ height: "4px", width: "100%", background: statusColor, borderTopLeftRadius: "12px", borderTopRightRadius: "12px" }} />
+
       {/* header: name, role, availability */}
       <div style={styles.header}>
         <div style={styles.topRow}>
