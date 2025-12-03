@@ -1,11 +1,10 @@
-// Frontend/src/screens/DetailScreen.js
 import React, { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import Navbar from "../components/Navbar"
 import { API_URL } from "../config"
 
 export default function DetailScreen({ employee = null, onBack, onSaveDetails, onLogout, onProfile }) {
-  // detail fields (unchanged semantics)
+  // ---------- LOGIC (Original from User) ----------
   const [currentProject, setCurrentProject] = useState("")
   const [noCurrentProject, setNoCurrentProject] = useState(false)
   const [availability, setAvailability] = useState("Occupied")
@@ -24,6 +23,7 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
 
   // date-specific validation error messages
   const [dateError, setDateError] = useState("")
+  const [showHint, setShowHint] = useState(false)
 
   // responsive + navbar states
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth <= 900 : false)
@@ -36,7 +36,7 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
     return () => window.removeEventListener("resize", onResize)
   }, [])
 
-  // helper to parse list-like values (SheetDB often returns strings, arrays, or keyed objects)
+  // helper to parse list-like values
   const parseListField = (val) => {
     if (!val && val !== 0) return []
     if (Array.isArray(val)) return val.filter(Boolean)
@@ -69,7 +69,6 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
     return `${y}-${m}-${d}`
   }
 
-  // convert yyyy-mm-dd to Date (midnight)
   const isoToDate = (iso) => {
     if (!iso) return null
     const parts = iso.split("-").map((p) => parseInt(p, 10))
@@ -81,7 +80,7 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
     const d = isoToDate(isoDate)
     if (!d) return false
     const day = d.getDay()
-    return day === 0 || day === 6 // Sunday=0, Saturday=6
+    return day === 0 || day === 6
   }
 
   const daysBetween = (aIso, bIso) => {
@@ -93,8 +92,6 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
   }
 
   const maxSeparationDays = 365
-
-  // ---------- END date helpers ----------
 
   // populate detail fields from employee prop
   useEffect(() => {
@@ -127,7 +124,7 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
     setPreviousProjects(parseListField(employee.previous_projects))
   }, [employee])
 
-  // background refresh from API if empid present (unchanged)
+  // background refresh
   useEffect(() => {
     if (!employee || !employee.empid) return
     const id = employee.empid
@@ -139,14 +136,12 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
           const data = await res.json()
           const obj = Array.isArray(data) ? data[0] || data : data
           if (!obj) return
-          // update only detail fields if local ones are empty to avoid clobbering edits
           setCurrentProject((cur) => (cur ? cur : obj.current_project || obj.currentProject || ""))
           setNoCurrentProject((cur) => (cur ? cur : !(obj.current_project || obj.currentProject || "")))
 
           setAvailability((cur) => {
             if (cur) return cur
             let av = obj.availability || "Occupied"
-            // Expiry check
             if ((av === "Partially Available" || av.toLowerCase().includes("partial")) && (obj.to_date || obj.toDate)) {
               try {
                 const dStr = obj.to_date ? obj.to_date.split("T")[0] : obj.toDate
@@ -182,7 +177,6 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
   }
   const isValid = () => !Object.values(errors).some(Boolean) && !dateError
 
-  // response reader
   const readResponse = async (res) => {
     const ct = res.headers.get("content-type") || ""
     try {
@@ -193,7 +187,6 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
     }
   }
 
-  // fetch server record by empid (confirm)
   const fetchServerRecord = async (id) => {
     const url = `${API_URL.replace(/\/$/, "")}/api/employees/${encodeURIComponent(id)}`
     const r = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } })
@@ -209,41 +202,32 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
     return Array.isArray(data) ? data[0] || data : data
   }
 
-  // ---------- date change handlers with validations ----------
   const handleFromDateChange = (iso) => {
     setDateError("")
     if (!iso) {
       setFromDate("")
       return
     }
-
-    // from must be >= today
     const today = todayISO()
     if (isoToDate(iso) < isoToDate(today)) {
       setDateError("From date cannot be earlier than today.")
       return
     }
-
-    // no weekends
     if (isWeekend(iso)) {
       setDateError("From date cannot be a Saturday or Sunday.")
       return
     }
-
-    // if toDate exists, ensure from <= to
     if (toDate) {
       if (isoToDate(iso) > isoToDate(toDate)) {
         setDateError("From date cannot be after To date.")
         return
       }
-
       const diff = daysBetween(iso, toDate)
       if (diff !== null && diff > maxSeparationDays) {
         setDateError("Separation between From and To cannot exceed 1 year.")
         return
       }
     }
-
     setFromDate(iso)
     setDateError("")
   }
@@ -254,41 +238,31 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
       setToDate("")
       return
     }
-
-    // no weekends
     if (isWeekend(iso)) {
       setDateError("To date cannot be a Saturday or Sunday.")
       return
     }
-
-    // if fromDate exists, ensure to >= from
     if (fromDate) {
       if (isoToDate(iso) < isoToDate(fromDate)) {
         setDateError("To date cannot be earlier than From date.")
         return
       }
-
       const diff = daysBetween(fromDate, iso)
       if (diff !== null && diff > maxSeparationDays) {
         setDateError("Separation between From and To cannot exceed 1 year.")
         return
       }
     } else {
-      // if fromDate not set, ensure toDate is >= today
       const today = todayISO()
       if (isoToDate(iso) < isoToDate(today)) {
         setDateError("To date cannot be earlier than today.")
         return
       }
     }
-
     setToDate(iso)
     setDateError("")
   }
 
-  // ---------- END date handlers ----------
-
-  // Save details: write only detail fields, confirm by GET
   const handleSave = async () => {
     setError("")
     if (!employee || !employee.empid) {
@@ -312,7 +286,6 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
 
     setSavingState(true)
     try {
-      // prepare payload: only detail fields
       const payload = {
         current_project: noCurrentProject ? "" : (currentProject || ""),
         availability: effectiveAvailability,
@@ -325,15 +298,12 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
         updated_at: new Date().toISOString(),
       }
 
-      // remove undefined keys (but allow empty arrays/strings passed intentionally)
       Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k])
 
       const base = API_URL.replace(/\/$/, "")
       const id = employee.empid
       const target = `${base}/api/employees/${encodeURIComponent(id)}`
 
-
-      // Try PUT
       let res = await fetch(target, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -341,8 +311,6 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
       })
       let body = await readResponse(res)
 
-
-      // PATCH fallback
       if (!res.ok) {
         console.warn("[DetailScreen] PUT failed; trying PATCH")
         res = await fetch(target, {
@@ -351,10 +319,8 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
           body: JSON.stringify(payload),
         })
         body = await readResponse(res)
-
       }
 
-      // POST fallback
       if (!res.ok) {
         console.warn("[DetailScreen] PATCH failed; trying POST to collection endpoint")
         const postRes = await fetch(`${base}/api/employees`, {
@@ -369,14 +335,11 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
         }
       }
 
-      // Confirm by fetching record
       const serverRecord = await fetchServerRecord(id)
       if (!serverRecord) throw new Error("Could not fetch record after save — check backend.")
 
-      // Update sessionStorage (merge details only)
       try {
         const existing = JSON.parse(sessionStorage.getItem("user") || "{}")
-        // Merge only detail keys into cached user
         const merged = {
           ...existing,
           current_project: serverRecord.current_project ?? serverRecord.currentProject ?? "",
@@ -405,7 +368,6 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
     }
   }
 
-  // helpers for tags UI
   const addSkill = (s) => {
     if (!s) return
     if (!skills.includes(s)) setSkills((prev) => [...prev, s])
@@ -423,9 +385,6 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
     if (!previousProjects.includes(p)) setPreviousProjects((prev) => [...prev, p])
   }
   const removePrevious = (p) => setPreviousProjects((prev) => prev.filter((x) => x !== p))
-
-  // ---------- NAVBAR helpers ----------
-
 
   // ---------- STYLES (Modern & Industry Standard) ----------
   const theme = {
@@ -446,175 +405,72 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
   const styles = {
     page: {
       minHeight: "100vh",
-      background: "#f1f5f9", // Slightly darker for better contrast
-      fontFamily: "'Inter', 'Segoe UI', sans-serif",
-      paddingBottom: "80px", // More space for fixed footer
+      background: theme.bg,
+      fontFamily: "'Inter', sans-serif",
+      color: theme.text,
+      paddingBottom: "100px", // Space for fixed save bar
     },
     navContainer: {
       background: "white",
       borderBottom: `1px solid ${theme.border}`,
-      padding: "0", // Removed padding for full width
-      marginBottom: "40px",
+      padding: "0",
+      marginBottom: "20px", // Reduced from 40px
       position: "sticky",
       top: 0,
       zIndex: 200,
-    },
-    mainContainer: {
-      maxWidth: "1280px", // Wider for laptop
-      margin: "0 auto",
-      padding: isMobile ? "0 16px" : "0 40px",
-    },
-    header: {
-      marginBottom: "32px",
-      display: "flex",
-      flexDirection: isMobile ? "column" : "row",
-      justifyContent: "space-between",
-      alignItems: isMobile ? "flex-start" : "center",
-      gap: "16px",
+      width: "100%", // Ensure full width
+      left: 0,
     },
     titleGroup: {
       display: "flex",
       flexDirection: "column",
       gap: "4px",
     },
-    pageTitle: {
-      fontSize: "28px", // Larger title
-      fontWeight: "800",
-      color: theme.primary,
-      margin: 0,
-      letterSpacing: "-0.5px",
-    },
-    pageSubtitle: {
-      fontSize: "15px",
-      color: theme.textMuted,
-      fontWeight: "500",
-    },
-    backBtn: {
-      padding: "10px 20px",
-      borderRadius: "10px",
-      border: `1px solid ${theme.border}`,
-      background: "white",
-      color: theme.secondary,
-      fontWeight: "600",
-      fontSize: "14px",
-      cursor: "pointer",
-      transition: "all 0.2s ease",
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-    },
-    grid: {
-      display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr", // Wider left column
-      gap: "32px", // More gap
-      alignItems: "start",
-    },
-    card: {
-      background: theme.cardBg,
-      borderRadius: "20px", // Softer corners
-      border: `1px solid ${theme.border}`,
-      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", // Better shadow
-      padding: "32px", // More padding
-      display: "flex",
-      flexDirection: "column",
-      gap: "28px",
-    },
     sectionTitle: {
       fontSize: "18px",
-      fontWeight: "700",
+      fontWeight: "600",
       color: theme.primary,
       marginBottom: "20px",
+      paddingBottom: "12px",
       borderBottom: `1px solid ${theme.border}`,
-      paddingBottom: "16px",
-      letterSpacing: "-0.3px",
     },
-    fieldGroup: {
+    formGroup: {
       display: "flex",
       flexDirection: "column",
       gap: "8px",
     },
     label: {
       fontSize: "14px",
-      fontWeight: "600",
+      fontWeight: "500",
       color: theme.secondary,
-      marginBottom: "4px",
-    },
-    input: {
-      padding: "12px 16px", // Larger touch target
-      borderRadius: "10px",
-      border: `1px solid ${theme.border}`,
-      fontSize: "15px",
-      color: theme.text,
-      outline: "none",
-      transition: "all 0.2s ease",
-      width: "100%",
-      boxSizing: "border-box",
-      background: "#f8fafc",
-    },
-    select: {
-      padding: "12px 16px",
-      borderRadius: "10px",
-      border: `1px solid ${theme.border}`,
-      fontSize: "15px",
-      color: theme.text,
-      outline: "none",
-      width: "100%",
-      backgroundColor: "#f8fafc",
-      cursor: "pointer",
-      transition: "all 0.2s ease",
     },
     checkboxWrapper: {
       display: "flex",
       alignItems: "center",
-      gap: "10px",
+      gap: "8px",
       cursor: "pointer",
-      userSelect: "none",
-      padding: "4px 0",
     },
     checkbox: {
-      width: "18px",
-      height: "18px",
-      cursor: "pointer",
       accentColor: theme.accent,
+      width: "16px",
+      height: "16px",
     },
     checkboxLabel: {
       fontSize: "14px",
-      color: theme.secondary,
-      fontWeight: "500",
-    },
-    helperText: {
-      fontSize: "13px",
-      color: theme.textMuted,
-      marginTop: "6px",
-      lineHeight: "1.4",
-    },
-    errorText: {
-      fontSize: "13px",
-      color: theme.danger,
-      marginTop: "6px",
-      fontWeight: "600",
-      display: "flex",
-      alignItems: "center",
-      gap: "4px",
-    },
-    warningBox: {
-      background: "#fffbeb",
-      border: "1px solid #fcd34d",
-      color: "#92400e",
-      padding: "16px",
-      borderRadius: "12px",
-      fontSize: "14px",
-      marginTop: "12px",
-      lineHeight: "1.5",
+      color: theme.text,
     },
     tagInputContainer: {
       display: "flex",
       gap: "10px",
-      marginBottom: "16px",
+      marginBottom: "10px",
+    },
+    flexInput: {
+      flex: 1,
+      minWidth: 0,
+      width: "auto", // Override 100% width
     },
     addBtn: {
-      padding: "0 20px",
+      padding: "0 16px",
       borderRadius: "10px",
       background: theme.bg,
       border: `1px solid ${theme.border}`,
@@ -628,90 +484,46 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
     tagsWrapper: {
       display: "flex",
       flexWrap: "wrap",
-      gap: "10px",
+      gap: "8px",
+      marginTop: "8px",
     },
     tag: {
       display: "inline-flex",
       alignItems: "center",
-      gap: "8px",
-      padding: "6px 14px",
-      borderRadius: "999px",
-      background: "#eff6ff",
-      color: theme.accent,
+      gap: "6px",
+      padding: "6px 12px",
+      borderRadius: "20px",
+      background: "#e0f2fe", // Light blue (sky-100)
+      color: "#0369a1", // Darker blue text (sky-700)
       fontSize: "14px",
       fontWeight: "500",
-      border: "1px solid #dbeafe",
-      transition: "all 0.2s",
+      border: "1px solid #bae6fd", // sky-200
     },
     removeTagBtn: {
       border: "none",
       background: "transparent",
-      color: theme.accent,
+      color: "#0369a1",
       cursor: "pointer",
-      padding: "2px",
+      padding: "0",
+      marginLeft: "4px",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       fontSize: "16px",
-      opacity: 0.6,
-      transition: "opacity 0.2s",
+      lineHeight: 1,
+      opacity: 0.7,
     },
-    saveBar: {
-      position: "fixed",
-      bottom: "24px",
-      left: "50%",
-      transform: "translateX(-50%)",
-      background: "rgba(255, 255, 255, 0.9)",
-      backdropFilter: "blur(10px)",
-      border: `1px solid ${theme.border}`,
-      padding: "12px 24px",
-      display: "flex",
-      justifyContent: "center",
-      gap: "16px",
-      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-      zIndex: 100,
-      borderRadius: "16px",
-      width: "auto",
-      minWidth: "300px",
+    removeTagBtnHover: {
+      opacity: 1,
     },
-    saveBtn: {
-      padding: "12px 32px",
-      borderRadius: "12px",
-      background: theme.accent,
-      color: "white",
-      border: "none",
-      fontWeight: "600",
-      fontSize: "15px",
-      cursor: "pointer",
-      boxShadow: "0 4px 6px -1px rgba(37, 99, 235, 0.2)",
-      transition: "all 0.2s",
-      opacity: saving ? 0.7 : 1,
+    helperText: {
+      fontSize: "13px",
+      color: theme.textMuted,
+      marginTop: "4px",
     },
-    cancelBtn: {
-      padding: "12px 32px",
-      borderRadius: "12px",
-      background: "white",
-      color: theme.secondary,
-      border: `1px solid ${theme.border}`,
-      fontWeight: "600",
-      fontSize: "15px",
-      cursor: "pointer",
-      transition: "all 0.2s",
-    },
-    globalError: {
-      background: "#fef2f2",
-      border: `1px solid #fecaca`,
-      color: "#991b1b",
-      padding: "16px",
-      borderRadius: "12px",
-      marginBottom: "32px",
-      fontSize: "14px",
-      fontWeight: "500",
-      display: "flex",
-      alignItems: "center",
-      gap: "12px",
-    }
   }
+
+  // ...
 
   // computed min/max attributes for date inputs
   const fromMin = todayISO()
@@ -719,13 +531,12 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
   let toMax = ""
   if (fromDate) {
     const d = isoToDate(fromDate)
-    const maxD = new Date(d.getFullYear() + 1, d.getMonth(), d.getDate()) // approx +1 year same day
+    const maxD = new Date(d.getFullYear() + 1, d.getMonth(), d.getDate())
     const y = maxD.getFullYear()
     const m = String(maxD.getMonth() + 1).padStart(2, "0")
     const day = String(maxD.getDate()).padStart(2, "0")
     toMax = `${y}-${m}-${day}`
   } else {
-    // if fromDate not set, set toMax as today + 1 year
     const t = isoToDate(todayISO())
     const maxD = new Date(t.getFullYear() + 1, t.getMonth(), t.getDate())
     const y = maxD.getFullYear()
@@ -734,44 +545,229 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
     toMax = `${y}-${m}-${day}`
   }
 
+  // CSS Styles for responsiveness + Visual Polish
+  const cssStyles = `
+    /* Global Reset & Typography */
+    * {
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* Enterprise Inputs */
+    .modern-input, .modern-select, .modern-textarea {
+      display: block;
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 20px;
+      color: ${theme.text};
+      background-color: #fff;
+      background-clip: padding-box;
+      border: 1px solid ${theme.border};
+      appearance: none;
+      border-radius: 6px;
+      transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+    }
+    .modern-input::placeholder, .modern-textarea::placeholder {
+      color: ${theme.textMuted};
+      opacity: 0.8;
+    }
+    .modern-input:focus, .modern-select:focus, .modern-textarea:focus {
+      border-color: ${theme.accent};
+      outline: 0;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .modern-input:disabled, .modern-select:disabled, .modern-textarea:disabled {
+      background-color: #f1f5f9;
+      opacity: 1;
+      cursor: not-allowed;
+    }
+    .modern-select {
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      background-size: 16px 12px;
+      padding-right: 2.5rem;
+    }
+    .modern-textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    /* Layout Classes */
+    .responsive-container {
+      max-width: 1100px; /* Tighter, more readable max-width */
+      margin: 0 auto;
+      width: 92%;
+      padding: 0;
+    }
+    .responsive-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      word-wrap: break-word;
+      background-color: #fff;
+      background-clip: border-box;
+      border: 1px solid ${theme.border};
+      border-radius: 8px; /* Standard enterprise radius */
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      padding: 24px;
+      gap: 2px;
+    }
+    
+    .responsive-header {
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-direction: column;
+      align-items: flex-start;
+      padding-top: 16px; /* Reduced from 24px */
+    }
+    .responsive-page-title {
+      font-weight: 700;
+      color: ${theme.primary};
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: -0.025em;
+      line-height: 32px;
+    }
+    
+    .responsive-grid {
+      display: grid;
+      align-items: start;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    /* Save Bar */
+    .responsive-save-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid ${theme.border};
+      padding: 16px 24px;
+      display: flex;
+      justify-content: flex-end; /* Right aligned actions are standard */
+      gap: 12px;
+      z-index: 100;
+      box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.02);
+    }
+
+    /* Buttons */
+    .responsive-save-btn, .responsive-cancel-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 16px;
+      font-weight: 500;
+      font-size: 14px;
+      line-height: 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      white-space: nowrap;
+    }
+    .responsive-save-btn {
+      color: #fff;
+      background-color: ${theme.accent};
+      border: 1px solid transparent;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    .responsive-save-btn:hover {
+      background-color: ${theme.accentHover};
+    }
+    .responsive-save-btn:focus {
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+    }
+    
+    .responsive-cancel-btn {
+      color: ${theme.text};
+      background-color: #fff;
+      border: 1px solid ${theme.border};
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    .responsive-cancel-btn:hover {
+      background-color: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    /* Desktop Overrides */
+    @media (min-width: 901px) {
+      .responsive-container {
+        width: 100%;
+        padding: 0 24px;
+      }
+      .responsive-header {
+        flex-direction: row;
+        align-items: center;
+        padding-top: 32px;
+      }
+      .responsive-page-title {
+        font-size: 30px;
+        line-height: 36px;
+      }
+      .responsive-grid {
+        grid-template-columns: 2fr 1fr;
+        gap: 32px;
+      }
+      .responsive-save-bar {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 32px;
+        width: auto;
+        min-width: 400px;
+        border: 1px solid ${theme.border};
+        border-radius: 12px;
+        justify-content: center;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      }
+    }
+  `
+
   return (
     <div style={styles.page}>
+      <style>{cssStyles}</style>
       {/* Navbar */}
       <div style={styles.navContainer}>
         <Navbar user={employee} onLogout={onLogout} title="Details" />
       </div>
 
-      <div style={styles.mainContainer}>
+      <div className="responsive-container">
         {/* Header */}
-        <div style={styles.header}>
+        <div className="responsive-header">
           <div style={styles.titleGroup}>
-            <h1 style={styles.pageTitle}>{employee?.name || "Employee Details"}</h1>
+            <h1 className="responsive-page-title">{employee?.name || "Employee Details"}</h1>
             <p style={styles.pageSubtitle}>{employee?.role || "No role specified"} • {employee?.cluster || "No cluster"}</p>
           </div>
-          <button style={styles.backBtn} onClick={() => onBack && onBack()}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
-            Back to Directory
-          </button>
+          {/* Back button could go here if needed, but Navbar handles nav mostly */}
         </div>
 
         {/* Global Error */}
         {(error || dateError) && (
-          <div style={styles.globalError}>
+          <div style={styles.errorBanner}>
             {error || dateError}
           </div>
         )}
 
-        {/* Main Grid */}
-        <div style={styles.grid}>
-          {/* Left Column: Professional Details */}
-          <div style={styles.card}>
+        <div className="responsive-grid">
+          {/* Left Column: Professional Status */}
+          <div className="responsive-card">
             <div style={styles.sectionTitle}>Professional Status</div>
 
-            {/* Current Project */}
-            <div style={styles.fieldGroup}>
+            <div style={styles.formGroup}>
               <label style={styles.label}>Current Project</label>
               <input
-                style={styles.input}
+                className="modern-input"
                 value={currentProject}
                 onChange={(e) => {
                   const val = e.target.value
@@ -807,21 +803,23 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
               </div>
             </div>
 
-            {/* Availability */}
-            <div style={styles.fieldGroup}>
+            <div style={styles.formGroup}>
               <label style={styles.label}>Availability</label>
-              <select
-                style={{ ...styles.select, opacity: noCurrentProject ? 0.7 : 1 }}
-                value={noCurrentProject ? "Available" : availability}
-                onChange={(e) => setAvailability(e.target.value)}
-                disabled={noCurrentProject}
-              >
-                <option value="Available" disabled={!noCurrentProject}>Available</option>
-                <option value="Occupied">Occupied</option>
-                <option value="Partially Available">Partially Available</option>
-              </select>
-              {!noCurrentProject && (
-                <div style={styles.helperText}>
+              <div onClick={() => !noCurrentProject && setShowHint(true)} onMouseLeave={() => setShowHint(false)}>
+                <select
+                  className="modern-select"
+                  style={{ opacity: noCurrentProject ? 0.7 : 1 }}
+                  value={noCurrentProject ? "Available" : availability}
+                  onChange={(e) => setAvailability(e.target.value)}
+                  disabled={noCurrentProject}
+                >
+                  <option value="Available" disabled={!noCurrentProject}>Available</option>
+                  <option value="Occupied">Occupied</option>
+                  <option value="Partially Available">Partially Available</option>
+                </select>
+              </div>
+              {!noCurrentProject && showHint && (
+                <div style={{ ...styles.helperText, color: theme.warning, transition: 'opacity 0.2s' }}>
                   Requires "No current project" to be checked to select Available.
                 </div>
               )}
@@ -830,10 +828,10 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
             {/* Partial Availability Details */}
             {!noCurrentProject && availability === "Partially Available" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "8px", padding: "16px", background: "#f8fafc", borderRadius: "8px", border: `1px solid ${theme.border}` }}>
-                <div style={styles.fieldGroup}>
+                <div style={styles.formGroup}>
                   <label style={styles.label}>Hours Available (per day)</label>
                   <select
-                    style={styles.select}
+                    className="modern-select"
                     value={hoursAvailable}
                     onChange={(e) => setHoursAvailable(e.target.value)}
                   >
@@ -843,34 +841,34 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                     <option value="6">6 hours</option>
                     <option value="8">Full Day</option>
                   </select>
-                  {errors.hours && <div style={styles.errorText}>{errors.hours}</div>}
+                  {errors.hours && <div style={{ color: theme.danger, fontSize: "13px" }}>{errors.hours}</div>}
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                  <div style={styles.fieldGroup}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+                  <div style={{ ...styles.formGroup, flex: 1, minWidth: "140px" }}>
                     <label style={styles.label}>From Date</label>
                     <input
-                      style={styles.input}
+                      className="modern-input"
                       type="date"
                       value={fromDate}
                       onChange={(e) => handleFromDateChange(e.target.value)}
                       min={fromMin}
                       max={toDate || undefined}
                     />
-                    {errors.fromDate && <div style={styles.errorText}>{errors.fromDate}</div>}
+                    {errors.fromDate && <div style={{ color: theme.danger, fontSize: "13px" }}>{errors.fromDate}</div>}
                   </div>
 
-                  <div style={styles.fieldGroup}>
+                  <div style={{ ...styles.formGroup, flex: 1, minWidth: "140px" }}>
                     <label style={styles.label}>To Date</label>
                     <input
-                      style={styles.input}
+                      className="modern-input"
                       type="date"
                       value={toDate}
                       onChange={(e) => handleToDateChange(e.target.value)}
                       min={toMin}
                       max={toMax}
                     />
-                    {errors.toDate && <div style={styles.errorText}>{errors.toDate}</div>}
+                    {errors.toDate && <div style={{ color: theme.danger, fontSize: "13px" }}>{errors.toDate}</div>}
                   </div>
                 </div>
                 <div style={styles.helperText}>
@@ -883,14 +881,15 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
           {/* Right Column: Skills & Interests */}
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             {/* Skills */}
-            <div style={styles.card}>
+            <div className="responsive-card">
               <div style={styles.sectionTitle}>Skills</div>
-              <div style={styles.fieldGroup}>
+              <div style={styles.formGroup}>
                 <div style={styles.tagInputContainer}>
                   <input
                     id="skillInput"
                     placeholder="Add a skill..."
-                    style={styles.input}
+                    className="modern-input"
+                    style={styles.flexInput}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault()
@@ -927,14 +926,15 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
             </div>
 
             {/* Interests */}
-            <div style={styles.card}>
+            <div className="responsive-card">
               <div style={styles.sectionTitle}>Technical Interests</div>
-              <div style={styles.fieldGroup}>
+              <div style={styles.formGroup}>
                 <div style={styles.tagInputContainer}>
                   <input
                     id="interestInput"
                     placeholder="Add an interest..."
-                    style={styles.input}
+                    className="modern-input"
+                    style={styles.flexInput}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault()
@@ -971,14 +971,15 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
             </div>
 
             {/* Previous Projects */}
-            <div style={styles.card}>
+            <div className="responsive-card">
               <div style={styles.sectionTitle}>Previous Projects</div>
-              <div style={styles.fieldGroup}>
+              <div style={styles.formGroup}>
                 <div style={styles.tagInputContainer}>
                   <input
                     id="previousInput"
                     placeholder="Add a project..."
-                    style={styles.input}
+                    className="modern-input"
+                    style={styles.flexInput}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault()
@@ -1014,18 +1015,25 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
               </div>
             </div>
           </div>
-        </div >
-      </div >
+        </div>
+      </div>
 
-      {/* Floating Save Bar */}
-      < div style={styles.saveBar} >
-        <button type="button" onClick={() => onBack && onBack()} style={styles.cancelBtn}>
+      {/* Fixed Save Bar */}
+      <div className="responsive-save-bar">
+        <button
+          className="responsive-cancel-btn"
+          onClick={() => onBack && onBack()}
+        >
           Cancel
         </button>
-        <button type="button" onClick={handleSave} style={styles.saveBtn} disabled={saving}>
+        <button
+          className="responsive-save-btn"
+          onClick={handleSave}
+          disabled={saving}
+        >
           {saving ? "Saving..." : "Save Changes"}
         </button>
-      </div >
-    </div >
+      </div>
+    </div>
   )
 }

@@ -64,7 +64,7 @@ export default function Navbar_IC({ user, onLogout, title = "Employee Dashboard"
             justifyContent: "space-between",
             background: "linear-gradient(90deg, #016db9 0%, #0078d4 100%)",
             color: "white",
-            padding: isMobile ? "10px 12px" : "12px 16px",
+            padding: isMobile ? "16px 20px" : "20px 32px", // Increased padding
             borderRadius: "0", // Full width
             marginBottom: "0", // Flush with container
             gap: "12px",
@@ -109,6 +109,7 @@ export default function Navbar_IC({ user, onLogout, title = "Employee Dashboard"
             zIndex: 100,
             overflow: "hidden",
             border: "1px solid #e9eef6",
+            right: 0,
         },
         // Sliding Menu Styles
         overlay: {
