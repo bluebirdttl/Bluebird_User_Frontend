@@ -160,7 +160,7 @@ function DetailsRoute({ user, mergeProfileIntoUser, setUser, onLogout }) {
     } catch (e) {
       // console.warn("Failed to update sessionStorage after details save", e)
     }
-    navigate("/home")
+    navigate("/inline-activities")
   }
 
   return <DetailScreen employee={user} onBack={() => navigate("/home")} onSaveDetails={onSaveDetails} onLogout={onLogout} />
@@ -176,7 +176,7 @@ function ProfileRoute({ user, mergeProfileIntoUser, onLogout }) {
 
   const onSaveProfile = (profileOnly) => {
     mergeProfileIntoUser(profileOnly)
-    navigate("/home")
+    navigate("/inline-activities")
   }
 
   return <ProfileScreen employee={user} onBack={() => navigate("/home")} onSaveProfile={onSaveProfile} onLogout={onLogout} />
@@ -187,6 +187,5 @@ function ProfileRoute({ user, mergeProfileIntoUser, onLogout }) {
  * - Uses useNavigate safely
  */
 function ResetPasswordRoute({ user, onLogout }) {
-  const navigate = useNavigate();
   return <ResetPasswordScreen user={user} onLogout={onLogout} />;
 }

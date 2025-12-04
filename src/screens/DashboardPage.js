@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import Navbar from "../components/Navbar"
 import { API_URL } from "../config"
+import Loader from "../components/Loader"
 
 export default function DashboardPage() {
 
@@ -40,26 +41,25 @@ export default function DashboardPage() {
     }, [navigate])
 
     useEffect(() => {
+        const fetchMetrics = async () => {
+            try {
+                const res = await fetch(`${API_URL}/api/employees/dashboard-metrics?range=${capacityFilter}`, {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" }
+                })
+                if (!res.ok) throw new Error(`Failed to fetch: ${res.status} ${res.statusText}`)
+                const data = await res.json()
+                // console.log("[Dashboard] Metrics fetched:", data)
+                setMetrics(data)
+            } catch (err) {
+                // console.error("Dashboard fetch error:", err)
+                setError(err.message)
+            } finally {
+                setLoading(false)
+            }
+        }
         fetchMetrics()
     }, [capacityFilter])
-
-    const fetchMetrics = async () => {
-        try {
-            const res = await fetch(`${API_URL}/api/employees/dashboard-metrics?range=${capacityFilter}`, {
-                method: "GET",
-                headers: { "Content-Type": "application/json" }
-            })
-            if (!res.ok) throw new Error(`Failed to fetch: ${res.status} ${res.statusText}`)
-            const data = await res.json()
-            // console.log("[Dashboard] Metrics fetched:", data)
-            setMetrics(data)
-        } catch (err) {
-            // console.error("Dashboard fetch error:", err)
-            setError(err.message)
-        } finally {
-            setLoading(false)
-        }
-    }
 
     const handleLogout = () => {
         sessionStorage.clear()
@@ -280,104 +280,70 @@ export default function DashboardPage() {
         </div>
     )
 
-    // Vertical Bar Chart for Partial Hours (SVG with Axes)
-    const VerticalBarChart = ({ data, color = "#0078d4" }) => {
-        const entries = Object.entries(data).sort((a, b) => Number(a[0]) - Number(b[0])) // Sort by hours
-        if (entries.length === 0) return <div style={styles.noData}>No data available</div>
-
-        const maxVal = Math.max(...Object.values(data), 5) // Ensure at least 5 for scale
+    // New Chart for Capacity Totals (Vertical Comparison)
+    const CapacityComparisonChart = ({ partial, available }) => {
+        const data = [
+            { label: "Partial Available", value: partial, color: "#f59e0b" },
+            { label: "Available", value: available, color: "#22c55e" }
+        ];
+        const maxVal = Math.max(partial, available, 10); // Ensure scale
 
         // Responsive SVG settings
-        const padding = { top: 20, right: 30, bottom: 50, left: 50 }
-        // We use a viewBox to define the coordinate system, but let the SVG scale to fill the container
-        const viewBoxWidth = 800
-        const viewBoxHeight = 400
-        const innerWidth = viewBoxWidth - padding.left - padding.right
-        const innerHeight = viewBoxHeight - padding.top - padding.bottom
-
-        const barWidth = Math.min(60, innerWidth / entries.length - 20)
+        const viewBoxWidth = 400;
+        const viewBoxHeight = 300;
+        const padding = { top: 40, right: 20, bottom: 40, left: 50 };
+        const innerWidth = viewBoxWidth - padding.left - padding.right;
+        const innerHeight = viewBoxHeight - padding.top - padding.bottom;
+        const barWidth = 60;
 
         return (
-            <div style={{ width: "100%", height: "100%", minHeight: "300px", display: "flex" }}>
-                <svg
-                    width="100%"
-                    height="100%"
-                    viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
-                    preserveAspectRatio="none" // Allow stretching to fill
-                    style={{ overflow: "visible" }}
-                >
-                    {/* Grid Lines (Y-axis) */}
-                    {[0, 0.2, 0.4, 0.6, 0.8, 1].map((t) => {
-                        const y = padding.top + innerHeight * (1 - t)
-                        const val = Math.round(maxVal * t)
+            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="100%" height="100%" viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`} preserveAspectRatio="xMidYMid meet" style={{ overflow: "visible" }}>
+                    {/* Y-Axis Grid */}
+                    {[0, 0.25, 0.5, 0.75, 1].map((t) => {
+                        const y = padding.top + innerHeight * (1 - t);
+                        const val = Math.round(maxVal * t);
                         return (
                             <g key={t}>
-                                <line x1={padding.left} y1={y} x2={viewBoxWidth - padding.right} stroke="#f3f4f6" strokeWidth="1" />
-                                <text x={padding.left - 15} y={y + 4} textAnchor="end" fontSize="12" fill="#9ca3af" fontWeight="500">{val}</text>
+                                <line x1={padding.left} y1={y} x2={viewBoxWidth - padding.right} stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4 4" />
+                                <text x={padding.left - 10} y={y + 4} textAnchor="end" fontSize="12" fill="#9ca3af">{val}</text>
                             </g>
-                        )
+                        );
                     })}
 
                     {/* Bars */}
-                    {
-                        entries.map(([label, val], idx) => {
-                            // Center bars in their slot
-                            const slotWidth = innerWidth / entries.length
-                            const x = padding.left + (idx * slotWidth) + (slotWidth - barWidth) / 2
-                            const barHeight = (val / maxVal) * innerHeight
-                            const y = padding.top + innerHeight - barHeight
+                    {data.map((d, i) => {
+                        const x = padding.left + (innerWidth / 4) + (i * (innerWidth / 2)) - (barWidth / 2); // Center bars in halves
+                        const barHeight = (d.value / maxVal) * innerHeight;
+                        const y = padding.top + innerHeight - barHeight;
 
-                            return (
-                                <g key={label}>
-                                    <rect
-                                        x={x}
-                                        y={y}
-                                        width={barWidth}
-                                        height={barHeight}
-                                        fill={color}
-                                        rx="4"
-                                        style={{ transition: "all 0.3s ease", cursor: "pointer" }}
-                                        onMouseOver={(e) => e.target.style.opacity = 0.8}
-                                        onMouseOut={(e) => e.target.style.opacity = 1}
-                                    >
-                                        <title>{`${label} Hours: ${val} Users`}</title>
-                                    </rect>
-                                    {/* Value on top of bar */}
-                                    {val > 0 && (
-                                        <text
-                                            x={x + barWidth / 2}
-                                            y={y - 8}
-                                            textAnchor="middle"
-                                            fontSize="12"
-                                            fontWeight="600"
-                                            fill="#374151"
-                                        >
-                                            {val}
-                                        </text>
-                                    )}
-                                    {/* X-axis Label */}
-                                    <text
-                                        x={x + barWidth / 2}
-                                        y={viewBoxHeight - padding.bottom + 20}
-                                        textAnchor="middle"
-                                        fontSize="12"
-                                        fontWeight="500"
-                                        fill="#4b5563"
-                                    >
-                                        {label}h
-                                    </text>
-                                </g>
-                            )
-                        })
-                    }
+                        return (
+                            <g key={d.label}>
+                                <rect
+                                    x={x}
+                                    y={y}
+                                    width={barWidth}
+                                    height={barHeight}
+                                    fill={d.color}
+                                    rx="4"
+                                />
+                                {/* Value on top */}
+                                <text x={x + barWidth / 2} y={y - 10} textAnchor="middle" fontSize="14" fontWeight="bold" fill={d.color}>
+                                    {d.value}h
+                                </text>
+                                {/* Label at bottom */}
+                                <text x={x + barWidth / 2} y={viewBoxHeight - 15} textAnchor="middle" fontSize="12" fontWeight="600" fill="#374151">
+                                    {d.label}
+                                </text>
+                            </g>
+                        );
+                    })}
+                </svg>
+            </div>
+        );
+    };
 
-                    {/* Axis Labels */}
-                    <text x={viewBoxWidth / 2} y={viewBoxHeight - 10} textAnchor="middle" fontSize="12" fontWeight="600" fill="#9ca3af">Hours Available</text>
-                    <text x={15} y={viewBoxHeight / 2} textAnchor="middle" transform={`rotate(-90, 15, ${viewBoxHeight / 2})`} fontSize="12" fontWeight="600" fill="#9ca3af">Users</text>
-                </svg >
-            </div >
-        )
-    }
+
 
     // Horizontal Bar Chart for Clusters
     const HorizontalBarChart = ({ data, color = "#3b82f6" }) => {
@@ -481,7 +447,11 @@ export default function DashboardPage() {
         )
     }
 
-    if (loading) return <div style={styles.loading}>Loading Dashboard...</div>
+    if (loading) return (
+        <div style={{ height: "100vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
+            <Loader />
+        </div>
+    )
 
 
 
@@ -536,7 +506,10 @@ export default function DashboardPage() {
                             <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
                                 <span style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "8px" }}>Assuming 176 hrs/month/person</span>
                                 <div style={{ height: "90%", width: "100%" }}>
-                                    <VerticalBarChart data={metrics.partialHoursDistribution} color="#f59e0b" />
+                                    <CapacityComparisonChart
+                                        partial={metrics.totalPartialHours || 0}
+                                        available={metrics.totalAvailableHours || 0}
+                                    />
                                 </div>
                             </div>
                         </ChartCard>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { API_URL } from "../config";
 
 
+
 export default function LoginScreen({ onLogin }) {
     const navigate = useNavigate();
 
@@ -68,8 +69,8 @@ export default function LoginScreen({ onLogin }) {
                 setError(data.error || "Invalid credentials");
             }
         } catch (err) {
-            setError("Failed to connect to server. Make sure backend is running.");
-
+            console.error("Login Error:", err);
+            setError(`Failed to connect to server at ${API_URL}. Error: ${err.message}`);
         } finally {
             setLoading(false);
         }
@@ -191,7 +192,7 @@ export default function LoginScreen({ onLogin }) {
                         <label style={styles.label}>Email Address</label>
                         <input
                             type="email"
-                            placeholder="Enter your email"
+                            placeholder="Enter your TTL email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             style={styles.input}

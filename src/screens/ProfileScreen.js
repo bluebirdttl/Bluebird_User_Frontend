@@ -1,6 +1,6 @@
 // Frontend/src/screens/ProfileScreen.js
-import React, { useEffect, useRef, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import React, { useEffect, useState } from "react"
+
 import Navbar from "../components/Navbar"
 import { API_URL } from "../config"
 
@@ -40,13 +40,13 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
-  const [touched, setTouched] = useState({})
+
 
   const originalIdRef = React.useRef(null)
 
   // responsive + navbar states
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth <= 900 : false)
-  const navigate = useNavigate()
+
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 900)
@@ -124,7 +124,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
     otherRole: role === "Other" && !otherRole.trim() ? "Enter role" : "",
     cluster: !clusterMode ? "Cluster required" : (clusterMode === "Multiple" && (!cluster1 || !cluster2) ? "Both clusters required" : ""),
   }
-  const onBlurField = (k) => setTouched((t) => ({ ...t, [k]: true }))
+  const onBlurField = (k) => { } // No-op since touched is removed
   const isValid = () => !Object.values(errors).some(Boolean)
 
   // Read response utility
@@ -164,7 +164,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
   }
 
   const handleSave = async () => {
-    setTouched({ name: true, empid: true, email: true, role: true, otherRole: true, cluster: true })
+    // setTouched({ name: true, empid: true, email: true, role: true, otherRole: true, cluster: true })
     setError("")
 
     if (!isValid()) return setError("Fix errors before saving.")
@@ -199,7 +199,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
-      let body = await readResponse(res)
+      await readResponse(res)
 
 
       if (!res.ok) {

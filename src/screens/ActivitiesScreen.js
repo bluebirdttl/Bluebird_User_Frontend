@@ -4,6 +4,7 @@ import { API_URL } from "../config"
 import PageLayout from "../components/PageLayout"
 import { theme } from "../utils/theme"
 import { useIsMobile } from "../hooks/useIsMobile"
+import Loader from "../components/Loader"
 
 export default function ActivitiesScreen({ onLogout }) {
     const navigate = useNavigate()
@@ -65,7 +66,7 @@ export default function ActivitiesScreen({ onLogout }) {
             const res = await fetch(`${API_URL}/api/projects`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...formData, empid: user.id })
+                body: JSON.stringify({ ...formData, empid: user.empid })
             })
 
             if (res.ok) {
@@ -272,7 +273,9 @@ export default function ActivitiesScreen({ onLogout }) {
                 <div style={styles.listCard}>
                     <h2 style={styles.title}>Existing Activities</h2>
                     {loading ? (
-                        <div>Loading...</div>
+                        <div style={{ position: "relative", minHeight: "200px" }}>
+                            <Loader />
+                        </div>
                     ) : projects.length === 0 ? (
                         <div style={{ color: theme.colors.text.secondary }}>No projects found.</div>
                     ) : (

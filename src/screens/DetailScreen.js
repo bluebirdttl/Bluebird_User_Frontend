@@ -1,552 +1,546 @@
-import React, { useEffect, useRef, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import React, { useEffect, useState } from "react"
+
 import Navbar from "../components/Navbar"
 import { API_URL } from "../config"
 
+import Loader from "../components/Loader"
+
 export default function DetailScreen({ employee = null, onBack, onSaveDetails, onLogout, onProfile }) {
-  // ---------- LOGIC (Original from User) ----------
-  const [currentProject, setCurrentProject] = useState("")
-  const [noCurrentProject, setNoCurrentProject] = useState(false)
-  const [availability, setAvailability] = useState("Occupied")
-  const [hoursAvailable, setHoursAvailable] = useState("")
-  const [fromDate, setFromDate] = useState("")
-  const [toDate, setToDate] = useState("")
+    // ---------- LOGIC (Original from User) ----------
+    const [currentProject, setCurrentProject] = useState("")
+    const [noCurrentProject, setNoCurrentProject] = useState(false)
+    const [availability, setAvailability] = useState("Occupied")
+    const [hoursAvailable, setHoursAvailable] = useState("")
+    const [fromDate, setFromDate] = useState("")
+    const [toDate, setToDate] = useState("")
 
-  // Skills / Interests / Previous projects as arrays (tag-style)
-  const [skills, setSkills] = useState([])
-  const [interests, setInterests] = useState([]) // array of strings
-  const [previousProjects, setPreviousProjects] = useState([]) // array of strings
+    // Skills / Interests / Previous projects as arrays (tag-style)
+    const [skills, setSkills] = useState([])
+    const [interests, setInterests] = useState([]) // array of strings
+    const [previousProjects, setPreviousProjects] = useState([]) // array of strings
 
-  const [loading, setLoading] = useState(false)
-  const [saving, setSavingState] = useState(false)
-  const [error, setError] = useState("")
+    const [loading, setLoading] = useState(true)
+    const [saving, setSavingState] = useState(false)
+    const [error, setError] = useState("")
+    const [dateError, setDateError] = useState("")
+    const [showHint, setShowHint] = useState(false)
 
-  // date-specific validation error messages
-  const [dateError, setDateError] = useState("")
-  const [showHint, setShowHint] = useState(false)
 
-  // responsive + navbar states
-  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth <= 900 : false)
-  const navigate = useNavigate()
 
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 900)
-    onResize()
-    window.addEventListener("resize", onResize)
-    return () => window.removeEventListener("resize", onResize)
-  }, [])
-
-  // helper to parse list-like values
-  const parseListField = (val) => {
-    if (!val && val !== 0) return []
-    if (Array.isArray(val)) return val.filter(Boolean)
-    if (typeof val === "object" && val !== null) {
-      try {
-        return Object.values(val).flat().filter(Boolean)
-      } catch {
-        return []
-      }
-    }
-    if (typeof val === "string") {
-      try {
-        const parsed = JSON.parse(val)
-        if (Array.isArray(parsed)) return parsed.filter(Boolean)
-      } catch { }
-      const sep = val.includes(",") ? "," : val.includes(";") ? ";" : null
-      if (sep) return val.split(sep).map((s) => s.trim()).filter(Boolean)
-      if (val.includes("\n")) return val.split("\n").map((s) => s.trim()).filter(Boolean)
-      return val.trim() ? [val.trim()] : []
-    }
-    return []
-  }
-
-  // ---------- date helpers ----------
-  const todayISO = () => {
-    const t = new Date()
-    const y = t.getFullYear()
-    const m = String(t.getMonth() + 1).padStart(2, "0")
-    const d = String(t.getDate()).padStart(2, "0")
-    return `${y}-${m}-${d}`
-  }
-
-  const isoToDate = (iso) => {
-    if (!iso) return null
-    const parts = iso.split("-").map((p) => parseInt(p, 10))
-    if (parts.length !== 3 || parts.some(isNaN)) return null
-    return new Date(parts[0], parts[1] - 1, parts[2])
-  }
-
-  const isWeekend = (isoDate) => {
-    const d = isoToDate(isoDate)
-    if (!d) return false
-    const day = d.getDay()
-    return day === 0 || day === 6
-  }
-
-  const daysBetween = (aIso, bIso) => {
-    const a = isoToDate(aIso)
-    const b = isoToDate(bIso)
-    if (!a || !b) return null
-    const diffMs = Math.abs(b.setHours(0, 0, 0, 0) - a.setHours(0, 0, 0, 0))
-    return Math.round(diffMs / (1000 * 60 * 60 * 24))
-  }
-
-  const maxSeparationDays = 365
-
-  // populate detail fields from employee prop
-  useEffect(() => {
-    if (!employee) return
-    const cp = employee.current_project || employee.currentProject || ""
-    setCurrentProject(cp)
-    setNoCurrentProject(!cp)
-
-    let av = employee.availability || "Occupied"
-    // Expiry check
-    if ((av === "Partially Available" || av.toLowerCase().includes("partial")) && (employee.to_date || employee.toDate)) {
-      try {
-        const dStr = employee.to_date ? employee.to_date.split("T")[0] : employee.toDate
-        const parts = dStr.split("-").map(p => parseInt(p, 10))
-        const toDateObj = new Date(parts[0], parts[1] - 1, parts[2])
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        if (toDateObj < today) {
-          av = "Occupied"
+    // helper to parse list-like values
+    const parseListField = (val) => {
+        if (!val && val !== 0) return []
+        if (Array.isArray(val)) return val.filter(Boolean)
+        if (typeof val === "object" && val !== null) {
+            try {
+                return Object.values(val).flat().filter(Boolean)
+            } catch {
+                return []
+            }
         }
-      } catch (e) { }
+        if (typeof val === "string") {
+            try {
+                const parsed = JSON.parse(val)
+                if (Array.isArray(parsed)) return parsed.filter(Boolean)
+            } catch { }
+            const sep = val.includes(",") ? "," : val.includes(";") ? ";" : null
+            if (sep) return val.split(sep).map((s) => s.trim()).filter(Boolean)
+            if (val.includes("\n")) return val.split("\n").map((s) => s.trim()).filter(Boolean)
+            return val.trim() ? [val.trim()] : []
+        }
+        return []
     }
-    setAvailability(av)
 
-    setHoursAvailable(employee.hours_available || employee.hoursAvailable || "")
-    setFromDate(employee.from_date ? (employee.from_date.split("T")[0]) : (employee.fromDate || ""))
-    setToDate(employee.to_date ? (employee.to_date.split("T")[0]) : (employee.toDate || ""))
-    setSkills(parseListField(employee.current_skills))
-    setInterests(parseListField(employee.interests))
-    setPreviousProjects(parseListField(employee.previous_projects))
-  }, [employee])
+    // ---------- date helpers ----------
+    const todayISO = () => {
+        const t = new Date()
+        const y = t.getFullYear()
+        const m = String(t.getMonth() + 1).padStart(2, "0")
+        const d = String(t.getDate()).padStart(2, "0")
+        return `${y}-${m}-${d}`
+    }
 
-  // background refresh
-  useEffect(() => {
-    if (!employee || !employee.empid) return
-    const id = employee.empid
-    const url = `${API_URL.replace(/\/$/, "")}/api/employees/${encodeURIComponent(id)}`
-      ; (async () => {
-        try {
-          const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } })
-          if (!res.ok) return
-          const data = await res.json()
-          const obj = Array.isArray(data) ? data[0] || data : data
-          if (!obj) return
-          setCurrentProject((cur) => (cur ? cur : obj.current_project || obj.currentProject || ""))
-          setNoCurrentProject((cur) => (cur ? cur : !(obj.current_project || obj.currentProject || "")))
+    const isoToDate = (iso) => {
+        if (!iso) return null
+        const parts = iso.split("-").map((p) => parseInt(p, 10))
+        if (parts.length !== 3 || parts.some(isNaN)) return null
+        return new Date(parts[0], parts[1] - 1, parts[2])
+    }
 
-          setAvailability((cur) => {
-            if (cur) return cur
-            let av = obj.availability || "Occupied"
-            if ((av === "Partially Available" || av.toLowerCase().includes("partial")) && (obj.to_date || obj.toDate)) {
-              try {
-                const dStr = obj.to_date ? obj.to_date.split("T")[0] : obj.toDate
+    const isWeekend = (isoDate) => {
+        const d = isoToDate(isoDate)
+        if (!d) return false
+        const day = d.getDay()
+        return day === 0 || day === 6
+    }
+
+    const daysBetween = (aIso, bIso) => {
+        const a = isoToDate(aIso)
+        const b = isoToDate(bIso)
+        if (!a || !b) return null
+        const diffMs = Math.abs(b.setHours(0, 0, 0, 0) - a.setHours(0, 0, 0, 0))
+        return Math.round(diffMs / (1000 * 60 * 60 * 24))
+    }
+
+    const maxSeparationDays = 365
+
+    // populate detail fields from employee prop
+    useEffect(() => {
+        if (!employee) return
+        const cp = employee.current_project || employee.currentProject || ""
+        setCurrentProject(cp)
+        setNoCurrentProject(!cp)
+
+        let av = employee.availability || "Occupied"
+        // Expiry check
+        if ((av === "Partially Available" || av.toLowerCase().includes("partial")) && (employee.to_date || employee.toDate)) {
+            try {
+                const dStr = employee.to_date ? employee.to_date.split("T")[0] : employee.toDate
                 const parts = dStr.split("-").map(p => parseInt(p, 10))
                 const toDateObj = new Date(parts[0], parts[1] - 1, parts[2])
                 const today = new Date()
                 today.setHours(0, 0, 0, 0)
                 if (toDateObj < today) {
-                  av = "Occupied"
+                    av = "Occupied"
                 }
-              } catch (e) { }
+            } catch (e) { }
+        }
+        setAvailability(av)
+
+        setHoursAvailable(employee.hours_available || employee.hoursAvailable || "")
+        setFromDate(employee.from_date ? (employee.from_date.split("T")[0]) : (employee.fromDate || ""))
+        setToDate(employee.to_date ? (employee.to_date.split("T")[0]) : (employee.toDate || ""))
+        setSkills(parseListField(employee.current_skills))
+        setInterests(parseListField(employee.interests))
+        setPreviousProjects(parseListField(employee.previous_projects))
+    }, [employee])
+
+    // background refresh
+    useEffect(() => {
+        if (!employee || !employee.empid) return
+        const id = employee.empid
+        const url = `${API_URL.replace(/\/$/, "")}/api/employees/${encodeURIComponent(id)}`
+            ; (async () => {
+                try {
+                    setLoading(true)
+                    const res = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } })
+                    if (!res.ok) return
+                    const data = await res.json()
+                    const obj = Array.isArray(data) ? data[0] || data : data
+                    if (!obj) return
+                    setCurrentProject((cur) => (cur ? cur : obj.current_project || obj.currentProject || ""))
+                    setNoCurrentProject((cur) => (cur ? cur : !(obj.current_project || obj.currentProject || "")))
+
+                    setAvailability((cur) => {
+                        if (cur) return cur
+                        let av = obj.availability || "Occupied"
+                        if ((av === "Partially Available" || av.toLowerCase().includes("partial")) && (obj.to_date || obj.toDate)) {
+                            try {
+                                const dStr = obj.to_date ? obj.to_date.split("T")[0] : obj.toDate
+                                const parts = dStr.split("-").map(p => parseInt(p, 10))
+                                const toDateObj = new Date(parts[0], parts[1] - 1, parts[2])
+                                const today = new Date()
+                                today.setHours(0, 0, 0, 0)
+                                if (toDateObj < today) {
+                                    av = "Occupied"
+                                }
+                            } catch (e) { }
+                        }
+                        return av
+                    })
+                    setHoursAvailable((cur) => (cur ? cur : (obj.hours_available || obj.hoursAvailable || "")))
+                    setFromDate((cur) => (cur ? cur : (obj.from_date ? obj.from_date.split("T")[0] : (obj.fromDate || ""))))
+                    setToDate((cur) => (cur ? cur : (obj.to_date ? obj.to_date.split("T")[0] : (obj.toDate || ""))))
+                    setSkills((cur) => (cur && cur.length ? cur : parseListField(obj.current_skills)))
+                    setInterests((cur) => (cur && cur.length ? cur : parseListField(obj.interests)))
+                    setPreviousProjects((cur) => (cur && cur.length ? cur : parseListField(obj.previous_projects)))
+                } catch (e) {
+                    console.warn("DetailScreen background refresh failed:", e)
+                } finally {
+                    setLoading(false)
+                }
+            })()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [employee && employee.empid])
+
+    // validation
+    const errors = {
+        hours: (!noCurrentProject && availability === "Partially Available" && (!hoursAvailable || isNaN(Number(hoursAvailable)))) ? "Specify hours" : "",
+        fromDate: (!noCurrentProject && availability === "Partially Available" && !fromDate) ? "From date required" : "",
+        toDate: (!noCurrentProject && availability === "Partially Available" && !toDate) ? "To date required" : "",
+    }
+    const isValid = () => !Object.values(errors).some(Boolean) && !dateError
+
+    const readResponse = async (res) => {
+        const ct = res.headers.get("content-type") || ""
+        try {
+            if (ct.includes("application/json")) return await res.json()
+            return await res.text()
+        } catch {
+            return "<unreadable response>"
+        }
+    }
+
+    const fetchServerRecord = async (id) => {
+        const url = `${API_URL.replace(/\/$/, "")}/api/employees/${encodeURIComponent(id)}`
+        const r = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } })
+        if (!r.ok) {
+            const listUrl = `${API_URL.replace(/\/$/, "")}/api/employees`
+            const lr = await fetch(listUrl, { method: "GET", headers: { "Content-Type": "application/json" } })
+            if (!lr.ok) throw new Error(`Failed to fetch record for confirmation (list fetch status ${lr.status})`)
+            const arr = await lr.json()
+            if (!Array.isArray(arr)) throw new Error("Unexpected list format when confirming save")
+            return arr.find((x) => ((x.empid || x.id) + "").toString() === (id + "").toString()) || null
+        }
+        const data = await r.json()
+        return Array.isArray(data) ? data[0] || data : data
+    }
+
+    const handleFromDateChange = (iso) => {
+        setDateError("")
+        if (!iso) {
+            setFromDate("")
+            return
+        }
+        const today = todayISO()
+        if (isoToDate(iso) < isoToDate(today)) {
+            setDateError("From date cannot be earlier than today.")
+            return
+        }
+        if (isWeekend(iso)) {
+            setDateError("From date cannot be a Saturday or Sunday.")
+            return
+        }
+        if (toDate) {
+            if (isoToDate(iso) > isoToDate(toDate)) {
+                setDateError("From date cannot be after To date.")
+                return
             }
-            return av
-          })
-          setHoursAvailable((cur) => (cur ? cur : (obj.hours_available || obj.hoursAvailable || "")))
-          setFromDate((cur) => (cur ? cur : (obj.from_date ? obj.from_date.split("T")[0] : (obj.fromDate || ""))))
-          setToDate((cur) => (cur ? cur : (obj.to_date ? obj.to_date.split("T")[0] : (obj.toDate || ""))))
-          setSkills((cur) => (cur && cur.length ? cur : parseListField(obj.current_skills)))
-          setInterests((cur) => (cur && cur.length ? cur : parseListField(obj.interests)))
-          setPreviousProjects((cur) => (cur && cur.length ? cur : parseListField(obj.previous_projects)))
-        } catch (e) {
-          console.warn("DetailScreen background refresh failed:", e)
+            const diff = daysBetween(iso, toDate)
+            if (diff !== null && diff > maxSeparationDays) {
+                setDateError("Separation between From and To cannot exceed 1 year.")
+                return
+            }
         }
-      })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employee && employee.empid])
+        setFromDate(iso)
+        setDateError("")
+    }
 
-  // validation
-  const errors = {
-    hours: (!noCurrentProject && availability === "Partially Available" && (!hoursAvailable || isNaN(Number(hoursAvailable)))) ? "Specify hours" : "",
-    fromDate: (!noCurrentProject && availability === "Partially Available" && !fromDate) ? "From date required" : "",
-    toDate: (!noCurrentProject && availability === "Partially Available" && !toDate) ? "To date required" : "",
-  }
-  const isValid = () => !Object.values(errors).some(Boolean) && !dateError
+    const handleToDateChange = (iso) => {
+        setDateError("")
+        if (!iso) {
+            setToDate("")
+            return
+        }
+        if (isWeekend(iso)) {
+            setDateError("To date cannot be a Saturday or Sunday.")
+            return
+        }
+        if (fromDate) {
+            if (isoToDate(iso) < isoToDate(fromDate)) {
+                setDateError("To date cannot be earlier than From date.")
+                return
+            }
+            const diff = daysBetween(fromDate, iso)
+            if (diff !== null && diff > maxSeparationDays) {
+                setDateError("Separation between From and To cannot exceed 1 year.")
+                return
+            }
+        } else {
+            const today = todayISO()
+            if (isoToDate(iso) < isoToDate(today)) {
+                setDateError("To date cannot be earlier than today.")
+                return
+            }
+        }
+        setToDate(iso)
+        setDateError("")
+    }
 
-  const readResponse = async (res) => {
-    const ct = res.headers.get("content-type") || ""
-    try {
-      if (ct.includes("application/json")) return await res.json()
-      return await res.text()
-    } catch {
-      return "<unreadable response>"
-    }
-  }
+    const handleSave = async () => {
+        setError("")
+        if (!employee || !employee.empid) {
+            setError("Missing empid — cannot save to server.")
+            return
+        }
 
-  const fetchServerRecord = async (id) => {
-    const url = `${API_URL.replace(/\/$/, "")}/api/employees/${encodeURIComponent(id)}`
-    const r = await fetch(url, { method: "GET", headers: { "Content-Type": "application/json" } })
-    if (!r.ok) {
-      const listUrl = `${API_URL.replace(/\/$/, "")}/api/employees`
-      const lr = await fetch(listUrl, { method: "GET", headers: { "Content-Type": "application/json" } })
-      if (!lr.ok) throw new Error(`Failed to fetch record for confirmation (list fetch status ${lr.status})`)
-      const arr = await lr.json()
-      if (!Array.isArray(arr)) throw new Error("Unexpected list format when confirming save")
-      return arr.find((x) => ((x.empid || x.id) + "").toString() === (id + "").toString()) || null
-    }
-    const data = await r.json()
-    return Array.isArray(data) ? data[0] || data : data
-  }
+        const effectiveAvailability = noCurrentProject ? "Available" : availability
 
-  const handleFromDateChange = (iso) => {
-    setDateError("")
-    if (!iso) {
-      setFromDate("")
-      return
-    }
-    const today = todayISO()
-    if (isoToDate(iso) < isoToDate(today)) {
-      setDateError("From date cannot be earlier than today.")
-      return
-    }
-    if (isWeekend(iso)) {
-      setDateError("From date cannot be a Saturday or Sunday.")
-      return
-    }
-    if (toDate) {
-      if (isoToDate(iso) > isoToDate(toDate)) {
-        setDateError("From date cannot be after To date.")
-        return
-      }
-      const diff = daysBetween(iso, toDate)
-      if (diff !== null && diff > maxSeparationDays) {
-        setDateError("Separation between From and To cannot exceed 1 year.")
-        return
-      }
-    }
-    setFromDate(iso)
-    setDateError("")
-  }
+        if (effectiveAvailability === "Partially Available") {
+            if (!isValid()) {
+                setError("Please fix validation errors before saving.")
+                return
+            }
+        }
 
-  const handleToDateChange = (iso) => {
-    setDateError("")
-    if (!iso) {
-      setToDate("")
-      return
+        if (!noCurrentProject && effectiveAvailability === "Available") {
+            setError("You cannot be 'Available' if you have a current project. Please select 'Occupied' or 'Partially Available'.")
+            return
+        }
+
+        setSavingState(true)
+        try {
+            const payload = {
+                current_project: noCurrentProject ? "" : (currentProject || ""),
+                availability: effectiveAvailability,
+                hours_available: effectiveAvailability === "Partially Available" ? Number(hoursAvailable) : null,
+                from_date: effectiveAvailability === "Partially Available" ? (fromDate || null) : null,
+                to_date: effectiveAvailability === "Partially Available" ? (toDate || null) : null,
+                current_skills: skills && skills.length ? skills : [],
+                interests: interests && interests.length ? interests : [],
+                previous_projects: previousProjects && previousProjects.length ? previousProjects : [],
+                updated_at: new Date().toISOString(),
+            }
+
+            Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k])
+
+            const base = API_URL.replace(/\/$/, "")
+            const id = employee.empid
+            const target = `${base}/api/employees/${encodeURIComponent(id)}`
+
+            let res = await fetch(target, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            })
+            await readResponse(res)
+
+            if (!res.ok) {
+                console.warn("[DetailScreen] PUT failed; trying PATCH")
+                res = await fetch(target, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                })
+                await readResponse(res)
+            }
+
+            if (!res.ok) {
+                console.warn("[DetailScreen] PATCH failed; trying POST to collection endpoint")
+                const postRes = await fetch(`${base}/api/employees`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ empid: id, ...payload }),
+                })
+                const postBody = await readResponse(postRes)
+
+                if (!postRes.ok) {
+                    throw new Error(`All update attempts failed. Last status: ${postRes.status}. Body: ${JSON.stringify(postBody)}`)
+                }
+            }
+
+            const serverRecord = await fetchServerRecord(id)
+            if (!serverRecord) throw new Error("Could not fetch record after save — check backend.")
+
+            try {
+                const existing = JSON.parse(sessionStorage.getItem("user") || "{}")
+                const merged = {
+                    ...existing,
+                    current_project: serverRecord.current_project ?? serverRecord.currentProject ?? "",
+                    availability: serverRecord.availability ?? "",
+                    hours_available: serverRecord.hours_available ?? serverRecord.hoursAvailable ?? null,
+                    from_date: serverRecord.from_date ?? serverRecord.fromDate ?? null,
+                    to_date: serverRecord.to_date ?? serverRecord.toDate ?? null,
+                    current_skills: serverRecord.current_skills ?? serverRecord.currentSkills ?? [],
+                    interests: serverRecord.interests ?? [],
+                    previous_projects: serverRecord.previous_projects ?? serverRecord.previousProjects ?? [],
+                    updated_at: serverRecord.updated_at ?? new Date().toISOString(),
+                }
+                sessionStorage.setItem("user", JSON.stringify(merged))
+            } catch (e) {
+                console.warn("sessionStorage merge failed:", e)
+            }
+
+            onSaveDetails && onSaveDetails(serverRecord)
+            alert("Details saved and confirmed on server.")
+        } catch (err) {
+            console.error("[DetailScreen] Save error:", err)
+            setError(err.message || "Save failed — check console/network")
+            alert(`Save failed: ${err.message}. See console/network tab.`)
+        } finally {
+            setSavingState(false)
+        }
     }
-    if (isWeekend(iso)) {
-      setDateError("To date cannot be a Saturday or Sunday.")
-      return
+
+    const addSkill = (s) => {
+        if (!s) return
+        if (!skills.includes(s)) setSkills((prev) => [...prev, s])
     }
+    const removeSkill = (s) => setSkills((prev) => prev.filter((x) => x !== s))
+
+    const addInterest = (i) => {
+        if (!i) return
+        if (!interests.includes(i)) setInterests((prev) => [...prev, i])
+    }
+    const removeInterest = (i) => setInterests((prev) => prev.filter((x) => x !== i))
+
+    const addPrevious = (p) => {
+        if (!p) return
+        if (!previousProjects.includes(p)) setPreviousProjects((prev) => [...prev, p])
+    }
+    const removePrevious = (p) => setPreviousProjects((prev) => prev.filter((x) => x !== p))
+
+    // ---------- STYLES (Modern & Industry Standard) ----------
+    const theme = {
+        primary: "#0f172a", // Slate 900
+        secondary: "#334155", // Slate 700
+        accent: "#2563eb", // Blue 600
+        accentHover: "#1d4ed8", // Blue 700
+        bg: "#f8fafc", // Slate 50
+        cardBg: "#ffffff",
+        border: "#e2e8f0", // Slate 200
+        text: "#1e293b", // Slate 800
+        textMuted: "#64748b", // Slate 500
+        danger: "#ef4444", // Red 500
+        success: "#22c55e", // Green 500
+        warning: "#f59e0b", // Amber 500
+    }
+
+    const styles = {
+        page: {
+            minHeight: "100vh",
+            background: theme.bg,
+            fontFamily: "'Inter', sans-serif",
+            color: theme.text,
+            paddingBottom: "100px", // Space for fixed save bar
+        },
+        navContainer: {
+            background: "white",
+            borderBottom: `1px solid ${theme.border}`,
+            padding: "0",
+            marginBottom: "20px", // Reduced from 40px
+            position: "sticky",
+            top: 0,
+            zIndex: 200,
+            width: "100%", // Ensure full width
+            left: 0,
+        },
+        titleGroup: {
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+        },
+        sectionTitle: {
+            fontSize: "18px",
+            fontWeight: "600",
+            color: theme.primary,
+            marginBottom: "20px",
+            paddingBottom: "12px",
+            borderBottom: `1px solid ${theme.border}`,
+        },
+        formGroup: {
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+        },
+        label: {
+            fontSize: "14px",
+            fontWeight: "500",
+            color: theme.secondary,
+        },
+        checkboxWrapper: {
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            cursor: "pointer",
+        },
+        checkbox: {
+            accentColor: theme.accent,
+            width: "16px",
+            height: "16px",
+        },
+        checkboxLabel: {
+            fontSize: "14px",
+            color: theme.text,
+        },
+        tagInputContainer: {
+            display: "flex",
+            gap: "10px",
+            marginBottom: "10px",
+        },
+        flexInput: {
+            flex: 1,
+            minWidth: 0,
+            width: "auto", // Override 100% width
+        },
+        addBtn: {
+            padding: "0 16px",
+            borderRadius: "10px",
+            background: theme.bg,
+            border: `1px solid ${theme.border}`,
+            color: theme.accent,
+            fontWeight: "600",
+            fontSize: "14px",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            whiteSpace: "nowrap",
+        },
+        tagsWrapper: {
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "8px",
+            marginTop: "8px",
+        },
+        tag: {
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "6px 12px",
+            borderRadius: "20px",
+            background: "#e0f2fe", // Light blue (sky-100)
+            color: "#0369a1", // Darker blue text (sky-700)
+            fontSize: "14px",
+            fontWeight: "500",
+            border: "1px solid #bae6fd", // sky-200
+        },
+        removeTagBtn: {
+            border: "none",
+            background: "transparent",
+            color: "#0369a1",
+            cursor: "pointer",
+            padding: "0",
+            marginLeft: "4px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "16px",
+            lineHeight: 1,
+            opacity: 0.7,
+        },
+        removeTagBtnHover: {
+            opacity: 1,
+        },
+        helperText: {
+            fontSize: "13px",
+            color: theme.textMuted,
+            marginTop: "4px",
+        },
+    }
+
+    // ...
+
+    // computed min/max attributes for date inputs
+    const fromMin = todayISO()
+    let toMin = fromDate || todayISO()
+    let toMax = ""
     if (fromDate) {
-      if (isoToDate(iso) < isoToDate(fromDate)) {
-        setDateError("To date cannot be earlier than From date.")
-        return
-      }
-      const diff = daysBetween(fromDate, iso)
-      if (diff !== null && diff > maxSeparationDays) {
-        setDateError("Separation between From and To cannot exceed 1 year.")
-        return
-      }
+        const d = isoToDate(fromDate)
+        const maxD = new Date(d.getFullYear() + 1, d.getMonth(), d.getDate())
+        const y = maxD.getFullYear()
+        const m = String(maxD.getMonth() + 1).padStart(2, "0")
+        const day = String(maxD.getDate()).padStart(2, "0")
+        toMax = `${y}-${m}-${day}`
     } else {
-      const today = todayISO()
-      if (isoToDate(iso) < isoToDate(today)) {
-        setDateError("To date cannot be earlier than today.")
-        return
-      }
-    }
-    setToDate(iso)
-    setDateError("")
-  }
-
-  const handleSave = async () => {
-    setError("")
-    if (!employee || !employee.empid) {
-      setError("Missing empid — cannot save to server.")
-      return
+        const t = isoToDate(todayISO())
+        const maxD = new Date(t.getFullYear() + 1, t.getMonth(), t.getDate())
+        const y = maxD.getFullYear()
+        const m = String(maxD.getMonth() + 1).padStart(2, "0")
+        const day = String(maxD.getDate()).padStart(2, "0")
+        toMax = `${y}-${m}-${day}`
     }
 
-    const effectiveAvailability = noCurrentProject ? "Available" : availability
-
-    if (effectiveAvailability === "Partially Available") {
-      if (!isValid()) {
-        setError("Please fix validation errors before saving.")
-        return
-      }
-    }
-
-    if (!noCurrentProject && effectiveAvailability === "Available") {
-      setError("You cannot be 'Available' if you have a current project. Please select 'Occupied' or 'Partially Available'.")
-      return
-    }
-
-    setSavingState(true)
-    try {
-      const payload = {
-        current_project: noCurrentProject ? "" : (currentProject || ""),
-        availability: effectiveAvailability,
-        hours_available: effectiveAvailability === "Partially Available" ? Number(hoursAvailable) : null,
-        from_date: effectiveAvailability === "Partially Available" ? (fromDate || null) : null,
-        to_date: effectiveAvailability === "Partially Available" ? (toDate || null) : null,
-        current_skills: skills && skills.length ? skills : [],
-        interests: interests && interests.length ? interests : [],
-        previous_projects: previousProjects && previousProjects.length ? previousProjects : [],
-        updated_at: new Date().toISOString(),
-      }
-
-      Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k])
-
-      const base = API_URL.replace(/\/$/, "")
-      const id = employee.empid
-      const target = `${base}/api/employees/${encodeURIComponent(id)}`
-
-      let res = await fetch(target, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      let body = await readResponse(res)
-
-      if (!res.ok) {
-        console.warn("[DetailScreen] PUT failed; trying PATCH")
-        res = await fetch(target, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
-        body = await readResponse(res)
-      }
-
-      if (!res.ok) {
-        console.warn("[DetailScreen] PATCH failed; trying POST to collection endpoint")
-        const postRes = await fetch(`${base}/api/employees`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ empid: id, ...payload }),
-        })
-        const postBody = await readResponse(postRes)
-
-        if (!postRes.ok) {
-          throw new Error(`All update attempts failed. Last status: ${postRes.status}. Body: ${JSON.stringify(postBody)}`)
-        }
-      }
-
-      const serverRecord = await fetchServerRecord(id)
-      if (!serverRecord) throw new Error("Could not fetch record after save — check backend.")
-
-      try {
-        const existing = JSON.parse(sessionStorage.getItem("user") || "{}")
-        const merged = {
-          ...existing,
-          current_project: serverRecord.current_project ?? serverRecord.currentProject ?? "",
-          availability: serverRecord.availability ?? "",
-          hours_available: serverRecord.hours_available ?? serverRecord.hoursAvailable ?? null,
-          from_date: serverRecord.from_date ?? serverRecord.fromDate ?? null,
-          to_date: serverRecord.to_date ?? serverRecord.toDate ?? null,
-          current_skills: serverRecord.current_skills ?? serverRecord.currentSkills ?? [],
-          interests: serverRecord.interests ?? [],
-          previous_projects: serverRecord.previous_projects ?? serverRecord.previousProjects ?? [],
-          updated_at: serverRecord.updated_at ?? new Date().toISOString(),
-        }
-        sessionStorage.setItem("user", JSON.stringify(merged))
-      } catch (e) {
-        console.warn("sessionStorage merge failed:", e)
-      }
-
-      onSaveDetails && onSaveDetails(serverRecord)
-      alert("Details saved and confirmed on server.")
-    } catch (err) {
-      console.error("[DetailScreen] Save error:", err)
-      setError(err.message || "Save failed — check console/network")
-      alert(`Save failed: ${err.message}. See console/network tab.`)
-    } finally {
-      setSavingState(false)
-    }
-  }
-
-  const addSkill = (s) => {
-    if (!s) return
-    if (!skills.includes(s)) setSkills((prev) => [...prev, s])
-  }
-  const removeSkill = (s) => setSkills((prev) => prev.filter((x) => x !== s))
-
-  const addInterest = (i) => {
-    if (!i) return
-    if (!interests.includes(i)) setInterests((prev) => [...prev, i])
-  }
-  const removeInterest = (i) => setInterests((prev) => prev.filter((x) => x !== i))
-
-  const addPrevious = (p) => {
-    if (!p) return
-    if (!previousProjects.includes(p)) setPreviousProjects((prev) => [...prev, p])
-  }
-  const removePrevious = (p) => setPreviousProjects((prev) => prev.filter((x) => x !== p))
-
-  // ---------- STYLES (Modern & Industry Standard) ----------
-  const theme = {
-    primary: "#0f172a", // Slate 900
-    secondary: "#334155", // Slate 700
-    accent: "#2563eb", // Blue 600
-    accentHover: "#1d4ed8", // Blue 700
-    bg: "#f8fafc", // Slate 50
-    cardBg: "#ffffff",
-    border: "#e2e8f0", // Slate 200
-    text: "#1e293b", // Slate 800
-    textMuted: "#64748b", // Slate 500
-    danger: "#ef4444", // Red 500
-    success: "#22c55e", // Green 500
-    warning: "#f59e0b", // Amber 500
-  }
-
-  const styles = {
-    page: {
-      minHeight: "100vh",
-      background: theme.bg,
-      fontFamily: "'Inter', sans-serif",
-      color: theme.text,
-      paddingBottom: "100px", // Space for fixed save bar
-    },
-    navContainer: {
-      background: "white",
-      borderBottom: `1px solid ${theme.border}`,
-      padding: "0",
-      marginBottom: "20px", // Reduced from 40px
-      position: "sticky",
-      top: 0,
-      zIndex: 200,
-      width: "100%", // Ensure full width
-      left: 0,
-    },
-    titleGroup: {
-      display: "flex",
-      flexDirection: "column",
-      gap: "4px",
-    },
-    sectionTitle: {
-      fontSize: "18px",
-      fontWeight: "600",
-      color: theme.primary,
-      marginBottom: "20px",
-      paddingBottom: "12px",
-      borderBottom: `1px solid ${theme.border}`,
-    },
-    formGroup: {
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-    },
-    label: {
-      fontSize: "14px",
-      fontWeight: "500",
-      color: theme.secondary,
-    },
-    checkboxWrapper: {
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      cursor: "pointer",
-    },
-    checkbox: {
-      accentColor: theme.accent,
-      width: "16px",
-      height: "16px",
-    },
-    checkboxLabel: {
-      fontSize: "14px",
-      color: theme.text,
-    },
-    tagInputContainer: {
-      display: "flex",
-      gap: "10px",
-      marginBottom: "10px",
-    },
-    flexInput: {
-      flex: 1,
-      minWidth: 0,
-      width: "auto", // Override 100% width
-    },
-    addBtn: {
-      padding: "0 16px",
-      borderRadius: "10px",
-      background: theme.bg,
-      border: `1px solid ${theme.border}`,
-      color: theme.accent,
-      fontWeight: "600",
-      fontSize: "14px",
-      cursor: "pointer",
-      transition: "all 0.2s",
-      whiteSpace: "nowrap",
-    },
-    tagsWrapper: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "8px",
-      marginTop: "8px",
-    },
-    tag: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "6px",
-      padding: "6px 12px",
-      borderRadius: "20px",
-      background: "#e0f2fe", // Light blue (sky-100)
-      color: "#0369a1", // Darker blue text (sky-700)
-      fontSize: "14px",
-      fontWeight: "500",
-      border: "1px solid #bae6fd", // sky-200
-    },
-    removeTagBtn: {
-      border: "none",
-      background: "transparent",
-      color: "#0369a1",
-      cursor: "pointer",
-      padding: "0",
-      marginLeft: "4px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: "16px",
-      lineHeight: 1,
-      opacity: 0.7,
-    },
-    removeTagBtnHover: {
-      opacity: 1,
-    },
-    helperText: {
-      fontSize: "13px",
-      color: theme.textMuted,
-      marginTop: "4px",
-    },
-  }
-
-  // ...
-
-  // computed min/max attributes for date inputs
-  const fromMin = todayISO()
-  let toMin = fromDate || todayISO()
-  let toMax = ""
-  if (fromDate) {
-    const d = isoToDate(fromDate)
-    const maxD = new Date(d.getFullYear() + 1, d.getMonth(), d.getDate())
-    const y = maxD.getFullYear()
-    const m = String(maxD.getMonth() + 1).padStart(2, "0")
-    const day = String(maxD.getDate()).padStart(2, "0")
-    toMax = `${y}-${m}-${day}`
-  } else {
-    const t = isoToDate(todayISO())
-    const maxD = new Date(t.getFullYear() + 1, t.getMonth(), t.getDate())
-    const y = maxD.getFullYear()
-    const m = String(maxD.getMonth() + 1).padStart(2, "0")
-    const day = String(maxD.getDate()).padStart(2, "0")
-    toMax = `${y}-${m}-${day}`
-  }
-
-  // CSS Styles for responsiveness + Visual Polish
-  const cssStyles = `
+    // CSS Styles for responsiveness + Visual Polish
+    const cssStyles = `
     /* Global Reset & Typography */
     * {
       box-sizing: border-box;
@@ -648,18 +642,20 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
     /* Save Bar */
     .responsive-save-bar {
       position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: auto;
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(8px);
-      border-top: 1px solid ${theme.border};
-      padding: 16px 24px;
+      border: 1px solid ${theme.border};
+      border-radius: 12px;
+      padding: 12px 24px;
       display: flex;
-      justify-content: flex-end; /* Right aligned actions are standard */
+      justify-content: center;
       gap: 12px;
       z-index: 100;
-      box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.02);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 
     /* Buttons */
@@ -720,320 +716,321 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
         gap: 32px;
       }
       .responsive-save-bar {
-        position: fixed;
-        left: 50%;
-        transform: translateX(-50%);
         bottom: 32px;
-        width: auto;
-        min-width: 400px;
-        border: 1px solid ${theme.border};
-        border-radius: 12px;
-        justify-content: center;
+        min-width: auto;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
       }
     }
   `
 
-  return (
-    <div style={styles.page}>
-      <style>{cssStyles}</style>
-      {/* Navbar */}
-      <div style={styles.navContainer}>
-        <Navbar user={employee} onLogout={onLogout} title="Details" />
-      </div>
-
-      <div className="responsive-container">
-        {/* Header */}
-        <div className="responsive-header">
-          <div style={styles.titleGroup}>
-            <h1 className="responsive-page-title">{employee?.name || "Employee Details"}</h1>
-            <p style={styles.pageSubtitle}>{employee?.role || "No role specified"} • {employee?.cluster || "No cluster"}</p>
-          </div>
-          {/* Back button could go here if needed, but Navbar handles nav mostly */}
-        </div>
-
-        {/* Global Error */}
-        {(error || dateError) && (
-          <div style={styles.errorBanner}>
-            {error || dateError}
-          </div>
-        )}
-
-        <div className="responsive-grid">
-          {/* Left Column: Professional Status */}
-          <div className="responsive-card">
-            <div style={styles.sectionTitle}>Professional Status</div>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Current Project</label>
-              <input
-                className="modern-input"
-                value={currentProject}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setCurrentProject(val)
-                  const hasProject = val && val.trim().length > 0
-                  setNoCurrentProject(!hasProject)
-                  if (hasProject && availability === "Available") {
-                    setAvailability("Occupied")
-                  }
-                }}
-                placeholder="e.g. Project Alpha"
-              />
-              <div style={{ marginTop: "8px" }}>
-                <label style={styles.checkboxWrapper}>
-                  <input
-                    type="checkbox"
-                    checked={noCurrentProject}
-                    onChange={(e) => {
-                      const checked = e.target.checked
-                      setNoCurrentProject(checked)
-                      if (checked) {
-                        setCurrentProject("")
-                      } else {
-                        if (availability === "Available") {
-                          setAvailability("Occupied")
-                        }
-                      }
-                    }}
-                    style={styles.checkbox}
-                  />
-                  <span style={styles.checkboxLabel}>I am currently not on any project</span>
-                </label>
-              </div>
-            </div>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Availability</label>
-              <div onClick={() => !noCurrentProject && setShowHint(true)} onMouseLeave={() => setShowHint(false)}>
-                <select
-                  className="modern-select"
-                  style={{ opacity: noCurrentProject ? 0.7 : 1 }}
-                  value={noCurrentProject ? "Available" : availability}
-                  onChange={(e) => setAvailability(e.target.value)}
-                  disabled={noCurrentProject}
-                >
-                  <option value="Available" disabled={!noCurrentProject}>Available</option>
-                  <option value="Occupied">Occupied</option>
-                  <option value="Partially Available">Partially Available</option>
-                </select>
-              </div>
-              {!noCurrentProject && showHint && (
-                <div style={{ ...styles.helperText, color: theme.warning, transition: 'opacity 0.2s' }}>
-                  Requires "No current project" to be checked to select Available.
+    return (
+        <div style={styles.page}>
+            <style>{cssStyles}</style>
+            {loading ? (
+                <div style={{ height: "100vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                    <Loader />
                 </div>
-              )}
-            </div>
+            ) : (
+                <>
+                    {/* Navbar */}
+                    <div style={styles.navContainer}>
+                        <Navbar user={employee} onLogout={onLogout} title="Details" />
+                    </div>
 
-            {/* Partial Availability Details */}
-            {!noCurrentProject && availability === "Partially Available" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "8px", padding: "16px", background: "#f8fafc", borderRadius: "8px", border: `1px solid ${theme.border}` }}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Hours Available (per day)</label>
-                  <select
-                    className="modern-select"
-                    value={hoursAvailable}
-                    onChange={(e) => setHoursAvailable(e.target.value)}
-                  >
-                    <option value="">Select Hours</option>
-                    <option value="2">2 hours</option>
-                    <option value="4">4 hours</option>
-                    <option value="6">6 hours</option>
-                    <option value="8">Full Day</option>
-                  </select>
-                  {errors.hours && <div style={{ color: theme.danger, fontSize: "13px" }}>{errors.hours}</div>}
-                </div>
+                    <div className="responsive-container">
+                        {/* Header */}
+                        <div className="responsive-header">
+                            <div style={styles.titleGroup}>
+                                <h1 className="responsive-page-title">{employee?.name || "Employee Details"}</h1>
+                                <p style={styles.pageSubtitle}>{employee?.role || "No role specified"} • {employee?.cluster || "No cluster"}</p>
+                            </div>
+                            {/* Back button could go here if needed, but Navbar handles nav mostly */}
+                        </div>
 
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
-                  <div style={{ ...styles.formGroup, flex: 1, minWidth: "140px" }}>
-                    <label style={styles.label}>From Date</label>
-                    <input
-                      className="modern-input"
-                      type="date"
-                      value={fromDate}
-                      onChange={(e) => handleFromDateChange(e.target.value)}
-                      min={fromMin}
-                      max={toDate || undefined}
-                    />
-                    {errors.fromDate && <div style={{ color: theme.danger, fontSize: "13px" }}>{errors.fromDate}</div>}
-                  </div>
+                        {/* Global Error */}
+                        {(error || dateError) && (
+                            <div style={styles.errorBanner}>
+                                {error || dateError}
+                            </div>
+                        )}
 
-                  <div style={{ ...styles.formGroup, flex: 1, minWidth: "140px" }}>
-                    <label style={styles.label}>To Date</label>
-                    <input
-                      className="modern-input"
-                      type="date"
-                      value={toDate}
-                      onChange={(e) => handleToDateChange(e.target.value)}
-                      min={toMin}
-                      max={toMax}
-                    />
-                    {errors.toDate && <div style={{ color: theme.danger, fontSize: "13px" }}>{errors.toDate}</div>}
-                  </div>
-                </div>
-                <div style={styles.helperText}>
-                  Note: Weekends are disabled. Max duration is 1 year.
-                </div>
-              </div>
+                        <div className="responsive-grid">
+                            {/* Left Column: Professional Status */}
+                            <div className="responsive-card">
+                                <div style={styles.sectionTitle}>Professional Status</div>
+
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Current Project</label>
+                                    <input
+                                        className="modern-input"
+                                        value={currentProject}
+                                        onChange={(e) => {
+                                            const val = e.target.value
+                                            setCurrentProject(val)
+                                            const hasProject = val && val.trim().length > 0
+                                            setNoCurrentProject(!hasProject)
+                                            if (hasProject && availability === "Available") {
+                                                setAvailability("Occupied")
+                                            }
+                                        }}
+                                        placeholder="e.g. Project Alpha"
+                                    />
+                                    <div style={{ marginTop: "8px" }}>
+                                        <label style={styles.checkboxWrapper}>
+                                            <input
+                                                type="checkbox"
+                                                checked={noCurrentProject}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked
+                                                    setNoCurrentProject(checked)
+                                                    if (checked) {
+                                                        setCurrentProject("")
+                                                    } else {
+                                                        if (availability === "Available") {
+                                                            setAvailability("Occupied")
+                                                        }
+                                                    }
+                                                }}
+                                                style={styles.checkbox}
+                                            />
+                                            <span style={styles.checkboxLabel}>I am currently not on any project</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Availability</label>
+                                    <div onClick={() => !noCurrentProject && setShowHint(true)} onMouseLeave={() => setShowHint(false)}>
+                                        <select
+                                            className="modern-select"
+                                            style={{ opacity: noCurrentProject ? 0.7 : 1 }}
+                                            value={noCurrentProject ? "Available" : availability}
+                                            onChange={(e) => setAvailability(e.target.value)}
+                                            disabled={noCurrentProject}
+                                        >
+                                            <option value="Available" disabled={!noCurrentProject}>Available</option>
+                                            <option value="Occupied">Occupied</option>
+                                            <option value="Partially Available">Partially Available</option>
+                                        </select>
+                                    </div>
+                                    {!noCurrentProject && showHint && (
+                                        <div style={{ ...styles.helperText, color: theme.warning, transition: 'opacity 0.2s' }}>
+                                            Requires "No current project" to be checked to select Available.
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Partial Availability Details */}
+                                {!noCurrentProject && availability === "Partially Available" && (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "8px", padding: "16px", background: "#f8fafc", borderRadius: "8px", border: `1px solid ${theme.border}` }}>
+                                        <div style={styles.formGroup}>
+                                            <label style={styles.label}>Hours Available (per day)</label>
+                                            <select
+                                                className="modern-select"
+                                                value={hoursAvailable}
+                                                onChange={(e) => setHoursAvailable(e.target.value)}
+                                            >
+                                                <option value="">Select Hours</option>
+                                                <option value="2">2 hours</option>
+                                                <option value="4">4 hours</option>
+                                                <option value="6">6 hours</option>
+                                                <option value="8">Full Day</option>
+                                            </select>
+                                            {errors.hours && <div style={{ color: theme.danger, fontSize: "13px" }}>{errors.hours}</div>}
+                                        </div>
+
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+                                            <div style={{ ...styles.formGroup, flex: 1, minWidth: "140px" }}>
+                                                <label style={styles.label}>From Date</label>
+                                                <input
+                                                    className="modern-input"
+                                                    type="date"
+                                                    value={fromDate}
+                                                    onChange={(e) => handleFromDateChange(e.target.value)}
+                                                    min={fromMin}
+                                                    max={toDate || undefined}
+                                                />
+                                                {errors.fromDate && <div style={{ color: theme.danger, fontSize: "13px" }}>{errors.fromDate}</div>}
+                                            </div>
+
+                                            <div style={{ ...styles.formGroup, flex: 1, minWidth: "140px" }}>
+                                                <label style={styles.label}>To Date</label>
+                                                <input
+                                                    className="modern-input"
+                                                    type="date"
+                                                    value={toDate}
+                                                    onChange={(e) => handleToDateChange(e.target.value)}
+                                                    min={toMin}
+                                                    max={toMax}
+                                                />
+                                                {errors.toDate && <div style={{ color: theme.danger, fontSize: "13px" }}>{errors.toDate}</div>}
+                                            </div>
+                                        </div>
+                                        <div style={styles.helperText}>
+                                            Note: Weekends are disabled. Max duration is 1 year.
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Right Column: Skills & Interests */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                                {/* Skills */}
+                                <div className="responsive-card">
+                                    <div style={styles.sectionTitle}>Skills</div>
+                                    <div style={styles.formGroup}>
+                                        <div style={styles.tagInputContainer}>
+                                            <input
+                                                id="skillInput"
+                                                placeholder="Add a skill..."
+                                                className="modern-input"
+                                                style={styles.flexInput}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault()
+                                                        const val = e.target.value.trim()
+                                                        if (val) addSkill(val)
+                                                        e.target.value = ""
+                                                    }
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const el = document.getElementById("skillInput")
+                                                    if (el && el.value.trim()) {
+                                                        addSkill(el.value.trim())
+                                                        el.value = ""
+                                                    }
+                                                }}
+                                                style={styles.addBtn}
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                        <div style={styles.tagsWrapper}>
+                                            {skills.map((s) => (
+                                                <div key={s} style={styles.tag}>
+                                                    {s}
+                                                    <button onClick={() => removeSkill(s)} style={styles.removeTagBtn}>×</button>
+                                                </div>
+                                            ))}
+                                            {skills.length === 0 && <span style={styles.helperText}>No skills added yet.</span>}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Interests */}
+                                <div className="responsive-card">
+                                    <div style={styles.sectionTitle}>Technical Interests</div>
+                                    <div style={styles.formGroup}>
+                                        <div style={styles.tagInputContainer}>
+                                            <input
+                                                id="interestInput"
+                                                placeholder="Add an interest..."
+                                                className="modern-input"
+                                                style={styles.flexInput}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault()
+                                                        const val = e.target.value.trim()
+                                                        if (val) addInterest(val)
+                                                        e.target.value = ""
+                                                    }
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const el = document.getElementById("interestInput")
+                                                    if (el && el.value.trim()) {
+                                                        addInterest(el.value.trim())
+                                                        el.value = ""
+                                                    }
+                                                }}
+                                                style={styles.addBtn}
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                        <div style={styles.tagsWrapper}>
+                                            {interests.map((i) => (
+                                                <div key={i} style={styles.tag}>
+                                                    {i}
+                                                    <button onClick={() => removeInterest(i)} style={styles.removeTagBtn}>×</button>
+                                                </div>
+                                            ))}
+                                            {interests.length === 0 && <span style={styles.helperText}>No interests added yet.</span>}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Previous Projects */}
+                                <div className="responsive-card">
+                                    <div style={styles.sectionTitle}>Previous Projects</div>
+                                    <div style={styles.formGroup}>
+                                        <div style={styles.tagInputContainer}>
+                                            <input
+                                                id="previousInput"
+                                                placeholder="Add a project..."
+                                                className="modern-input"
+                                                style={styles.flexInput}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault()
+                                                        const val = e.target.value.trim()
+                                                        if (val) addPrevious(val)
+                                                        e.target.value = ""
+                                                    }
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const el = document.getElementById("previousInput")
+                                                    if (el && el.value.trim()) {
+                                                        addPrevious(el.value.trim())
+                                                        el.value = ""
+                                                    }
+                                                }}
+                                                style={styles.addBtn}
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                        <div style={styles.tagsWrapper}>
+                                            {previousProjects.map((p) => (
+                                                <div key={p} style={styles.tag}>
+                                                    {p}
+                                                    <button onClick={() => removePrevious(p)} style={styles.removeTagBtn}>×</button>
+                                                </div>
+                                            ))}
+                                            {previousProjects.length === 0 && <span style={styles.helperText}>No previous projects listed.</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Fixed Save Bar */}
+                    <div className="responsive-save-bar">
+                        <button
+                            className="responsive-cancel-btn"
+                            onClick={() => onBack && onBack()}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="responsive-save-btn"
+                            onClick={handleSave}
+                            disabled={saving}
+                        >
+                            {saving ? "Saving..." : "Save Changes"}
+                        </button>
+                    </div>
+                </>
             )}
-          </div>
-
-          {/* Right Column: Skills & Interests */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            {/* Skills */}
-            <div className="responsive-card">
-              <div style={styles.sectionTitle}>Skills</div>
-              <div style={styles.formGroup}>
-                <div style={styles.tagInputContainer}>
-                  <input
-                    id="skillInput"
-                    placeholder="Add a skill..."
-                    className="modern-input"
-                    style={styles.flexInput}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault()
-                        const val = e.target.value.trim()
-                        if (val) addSkill(val)
-                        e.target.value = ""
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const el = document.getElementById("skillInput")
-                      if (el && el.value.trim()) {
-                        addSkill(el.value.trim())
-                        el.value = ""
-                      }
-                    }}
-                    style={styles.addBtn}
-                  >
-                    Add
-                  </button>
-                </div>
-                <div style={styles.tagsWrapper}>
-                  {skills.map((s) => (
-                    <div key={s} style={styles.tag}>
-                      {s}
-                      <button onClick={() => removeSkill(s)} style={styles.removeTagBtn}>×</button>
-                    </div>
-                  ))}
-                  {skills.length === 0 && <span style={styles.helperText}>No skills added yet.</span>}
-                </div>
-              </div>
-            </div>
-
-            {/* Interests */}
-            <div className="responsive-card">
-              <div style={styles.sectionTitle}>Technical Interests</div>
-              <div style={styles.formGroup}>
-                <div style={styles.tagInputContainer}>
-                  <input
-                    id="interestInput"
-                    placeholder="Add an interest..."
-                    className="modern-input"
-                    style={styles.flexInput}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault()
-                        const val = e.target.value.trim()
-                        if (val) addInterest(val)
-                        e.target.value = ""
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const el = document.getElementById("interestInput")
-                      if (el && el.value.trim()) {
-                        addInterest(el.value.trim())
-                        el.value = ""
-                      }
-                    }}
-                    style={styles.addBtn}
-                  >
-                    Add
-                  </button>
-                </div>
-                <div style={styles.tagsWrapper}>
-                  {interests.map((i) => (
-                    <div key={i} style={styles.tag}>
-                      {i}
-                      <button onClick={() => removeInterest(i)} style={styles.removeTagBtn}>×</button>
-                    </div>
-                  ))}
-                  {interests.length === 0 && <span style={styles.helperText}>No interests added yet.</span>}
-                </div>
-              </div>
-            </div>
-
-            {/* Previous Projects */}
-            <div className="responsive-card">
-              <div style={styles.sectionTitle}>Previous Projects</div>
-              <div style={styles.formGroup}>
-                <div style={styles.tagInputContainer}>
-                  <input
-                    id="previousInput"
-                    placeholder="Add a project..."
-                    className="modern-input"
-                    style={styles.flexInput}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault()
-                        const val = e.target.value.trim()
-                        if (val) addPrevious(val)
-                        e.target.value = ""
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const el = document.getElementById("previousInput")
-                      if (el && el.value.trim()) {
-                        addPrevious(el.value.trim())
-                        el.value = ""
-                      }
-                    }}
-                    style={styles.addBtn}
-                  >
-                    Add
-                  </button>
-                </div>
-                <div style={styles.tagsWrapper}>
-                  {previousProjects.map((p) => (
-                    <div key={p} style={styles.tag}>
-                      {p}
-                      <button onClick={() => removePrevious(p)} style={styles.removeTagBtn}>×</button>
-                    </div>
-                  ))}
-                  {previousProjects.length === 0 && <span style={styles.helperText}>No previous projects listed.</span>}
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
-
-      {/* Fixed Save Bar */}
-      <div className="responsive-save-bar">
-        <button
-          className="responsive-cancel-btn"
-          onClick={() => onBack && onBack()}
-        >
-          Cancel
-        </button>
-        <button
-          className="responsive-save-btn"
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
-      </div>
-    </div>
-  )
+    )
 }

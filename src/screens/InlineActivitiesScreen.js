@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { API_URL } from "../config"
 import PageLayout from "../components/PageLayout"
 import { theme } from "../utils/theme"
+import Loader from "../components/Loader"
 
 export default function InlineActivitiesScreen({ onLogout }) {
     const navigate = useNavigate()
@@ -275,7 +276,9 @@ export default function InlineActivitiesScreen({ onLogout }) {
             </div>
 
             {loading ? (
-                <div>Loading activities...</div>
+                <div style={{ position: "relative", minHeight: "200px" }}>
+                    <Loader />
+                </div>
             ) : filteredProjects.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "40px", color: theme.colors.text.secondary }}>
                     No activities found matching your criteria.

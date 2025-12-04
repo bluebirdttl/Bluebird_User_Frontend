@@ -1,12 +1,13 @@
 // Frontend/src/screens/HomeScreen.js
-import { useState, useEffect, useRef } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState, useEffect } from "react"
+
 import EmployeeCard from "../components/EmployeeCard"
 import Navbar from "../components/Navbar"
 import { API_URL } from "../config"
+import Loader from "../components/Loader"
 
 export default function HomeScreen({ onLogout, employee }) {
-  const navigate = useNavigate()
+
 
   const [employees, setEmployees] = useState([])
   const [filteredEmployees, setFilteredEmployees] = useState([])
@@ -243,7 +244,7 @@ export default function HomeScreen({ onLogout, employee }) {
     });
 
     setFilteredEmployees(filtered)
-  }, [searchTerm, availabilityFilter, availabilityRange, employees])
+  }, [searchTerm, availabilityFilter, availabilityRange, employees]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep same initials logic as EmployeeCard
   const getInitials = (name) => {
@@ -256,15 +257,7 @@ export default function HomeScreen({ onLogout, employee }) {
   }
 
   // Color generator same as EmployeeCard (keeps avatar consistent)
-  const getInitialsColor = (nm) => {
-    const colors = ["#0072bc", "#d32f2f", "#2e7d32", "#f57c00", "#7b1fa2"]
-    const n = (nm || " ").toString()
-    let hash = 0
-    for (let i = 0; i < n.length; i++) {
-      hash = n.charCodeAt(i) + ((hash << 5) - hash)
-    }
-    return colors[Math.abs(hash) % colors.length]
-  }
+
 
   const styles = {
     container: {
@@ -365,16 +358,15 @@ export default function HomeScreen({ onLogout, employee }) {
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.noResults}>Loading employees...</div>
+      <div style={{ ...styles.container, display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+        <Loader />
       </div>
     )
   }
 
   // derive initials / color for the profile avatar
-  const profileName = (employee && (employee.name || "")) || (employees[0] && employees[0].name) || "User"
-  const profileInitials = getInitials(profileName)
-  const profileBg = getInitialsColor(profileName)
+
+
 
   // range applicable for all except Occupied
   const rangeApplicable = availabilityFilter !== "Occupied"
