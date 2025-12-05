@@ -236,7 +236,7 @@ export default function Navbar_IC({ user, onLogout, title = "Employee Dashboard"
                     style={styles.drawerMenuItem}
                     onClick={() => {
                         setMenuOpen(false)
-                        window.open("https://forms.office.com/Pages/ResponsePage.aspx?id=YHed29djiE-ZJ_q-RG4jYu30tAiE4QZGndZ48sb8fWhUOTAxN0RFT0RCRzVXUDZYWEc1RUhORE1RSi4u&fswReload=1&fswNavStart=1764070424016", "_blank")
+                        window.open("https://forms.office.com/r/WukVsTZ1ad", "_blank")
                     }}
                     onMouseEnter={(e) => {
                         e.currentTarget.style.background = "rgba(255,255,255,0.1)"

@@ -4,7 +4,23 @@ import Navbar from "../components/Navbar"
 import { API_URL } from "../config"
 import Loader from "../components/Loader"
 
-export default function DashboardPage() {
+// Hook to track last updated time for specific data
+const useLastUpdated = (data) => {
+    const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleDateString())
+    const prevDataRef = React.useRef(data)
+
+    useEffect(() => {
+        // Simple deep comparison via JSON.stringify
+        if (JSON.stringify(data) !== JSON.stringify(prevDataRef.current)) {
+            setLastUpdated(new Date().toLocaleDateString())
+            prevDataRef.current = data
+        }
+    }, [data])
+
+    return lastUpdated
+}
+
+export default function DashboardPage({ onLogout }) {
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -26,10 +42,23 @@ export default function DashboardPage() {
         return () => window.removeEventListener("resize", onResize)
     }, [])
 
+    // Calculate last updated times
+    const capacityData = { partial: metrics.totalPartialHours, available: metrics.totalAvailableHours }
+    const capacityLastUpdated = useLastUpdated(capacityData)
+
+    const clustersLastUpdated = useLastUpdated(metrics.clusters)
+    const rolesLastUpdated = useLastUpdated(metrics.roles)
+
+
     useEffect(() => {
         const storedUser = sessionStorage.getItem("user")
         if (!storedUser) {
-            navigate("/")
+            // If no user in session, we might want to trigger logout to be safe, 
+            // but mostly we just redirect.
+            // However, if we are here, App.js thought we were logged in.
+            // So calling onLogout() is better to sync App state.
+            if (onLogout) onLogout();
+            else navigate("/")
             return
         }
         const parsedUser = JSON.parse(storedUser)
@@ -38,7 +67,7 @@ export default function DashboardPage() {
         if ((parsedUser.role_type || "").trim().toLowerCase() !== "manager") {
             navigate("/home") // ICs shouldn't see this
         }
-    }, [navigate])
+    }, [navigate, onLogout])
 
     useEffect(() => {
         const fetchMetrics = async () => {
@@ -62,8 +91,14 @@ export default function DashboardPage() {
     }, [capacityFilter])
 
     const handleLogout = () => {
-        sessionStorage.clear()
-        navigate("/")
+        // Use the prop from App.js which clears state AND session storage
+        if (onLogout) {
+            onLogout()
+        } else {
+            // Fallback if prop missing (shouldn't happen)
+            sessionStorage.clear()
+            navigate("/")
+        }
     }
 
     // --- Styles ---
@@ -265,7 +300,9 @@ export default function DashboardPage() {
 
     // --- Components ---
 
-    const ChartCard = ({ title, action, children }) => (
+
+
+    const ChartCard = ({ title, action, children, updatedAt }) => (
         <div style={styles.chartContainer}>
             <div style={styles.chartHeader}>
                 <h3 style={styles.chartTitle}>{title}</h3>
@@ -275,7 +312,7 @@ export default function DashboardPage() {
                 {children}
             </div>
             <div style={{ marginTop: "auto", paddingTop: "16px", fontSize: "12px", color: "#9ca3af", textAlign: "right", width: "100%" }}>
-                Updated at {new Date().toLocaleDateString()}
+                Updated at {updatedAt || new Date().toLocaleDateString()}
             </div>
         </div>
     )
@@ -455,6 +492,8 @@ export default function DashboardPage() {
 
 
 
+
+
     return (
         <div style={styles.page}>
             <Navbar user={user} onLogout={handleLogout} title="Manager Dashboard" />
@@ -480,6 +519,7 @@ export default function DashboardPage() {
                         {/* 1. Capacity Overview */}
                         <ChartCard
                             title="Capacity Overview"
+                            updatedAt={capacityLastUpdated}
                             action={
                                 <select
                                     value={capacityFilter}
@@ -515,12 +555,12 @@ export default function DashboardPage() {
                         </ChartCard>
 
                         {/* 2. Users per Cluster */}
-                        <ChartCard title="Users per Cluster">
+                        <ChartCard title="Users per Cluster" updatedAt={clustersLastUpdated}>
                             <HorizontalBarChart data={metrics.clusters} color="#3b82f6" />
                         </ChartCard>
 
                         {/* 3. Users per Role */}
-                        <ChartCard title="Users per Role">
+                        <ChartCard title="Users per Role" updatedAt={rolesLastUpdated}>
                             <PieChart data={metrics.roles} />
                         </ChartCard>
                     </div>

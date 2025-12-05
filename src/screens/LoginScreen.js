@@ -216,7 +216,7 @@ export default function LoginScreen({ onLogin }) {
 
                     <div style={{ marginTop: "15px", textAlign: "center" }}>
                         <a
-                            href="https://forms.office.com/Pages/ResponsePage.aspx?id=YHed29djiE-ZJ_q-RG4jYu30tAiE4QZGndZ48sb8fWhUOTAxN0RFT0RCRzVXUDZYWEc1RUhORE1RSi4u&fswReload=1&fswNavStart=1764070424016"
+                            href="https://forms.office.com/r/WukVsTZ1ad"
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{ color: "#0078d4", textDecoration: "none", fontSize: "14px", fontWeight: "500" }}

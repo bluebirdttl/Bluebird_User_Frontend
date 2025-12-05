@@ -11,7 +11,57 @@ import ResetPasswordScreen from "./screens/ResetPasswordScreen"
 import ActivitiesScreen from "./screens/ActivitiesScreen"
 import InlineActivitiesScreen from "./screens/InlineActivitiesScreen"
 
+import PWAInstallPopup from "./components/PWAInstallPopup"
+
 export default function App() {
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallPopup, setShowInstallPopup] = useState(false);
+
+  React.useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+      // Update UI notify the user they can install the PWA
+      // Only show if user is logged in (checked in render)
+      // We can also check if it's already installed via other means, but this event only fires if installable
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    // Show the install prompt
+    deferredPrompt.prompt();
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    // We've used the prompt, and can't use it again, throw it away
+    setDeferredPrompt(null);
+    setShowInstallPopup(false);
+  };
+
+  const handleClosePopup = () => {
+    setShowInstallPopup(false);
+  };
+
+  // Check if we should show the popup
+  // Show if:
+  // 1. We have a deferred prompt (browser says it's installable)
+  // 2. User is logged in (user state is not null)
+  // 3. We haven't explicitly closed it (showInstallPopup state - though we need to init this effectively)
+
+  // Actually, let's sync showInstallPopup with deferredPrompt presence initially?
+  // Or just use a separate effect.
+
+
+
   // initialize from sessionStorage so reload keeps logged-in user
   const initialUser = (() => {
     try {
@@ -24,6 +74,12 @@ export default function App() {
 
   const [user, setUser] = useState(initialUser)
   // console.log("[App] Current user state:", user);
+
+  React.useEffect(() => {
+    if (deferredPrompt && user) {
+      setShowInstallPopup(true);
+    }
+  }, [deferredPrompt, user]);
 
   const handleLogin = (userData) => {
     try {
@@ -74,7 +130,7 @@ export default function App() {
           path="/dashboard"
           element={
             user ? (
-              (user.role_type || "").trim().toLowerCase() === "manager" ? <DashboardPage /> : <Navigate to="/details" />
+              (user.role_type || "").trim().toLowerCase() === "manager" ? <DashboardPage onLogout={handleLogout} /> : <Navigate to="/details" />
             ) : (
               <Navigate to="/" />
             )
@@ -137,7 +193,16 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-    </Router>
+
+      {
+        showInstallPopup && (
+          <PWAInstallPopup
+            onInstall={handleInstallClick}
+            onClose={handleClosePopup}
+          />
+        )
+      }
+    </Router >
   )
 }
 

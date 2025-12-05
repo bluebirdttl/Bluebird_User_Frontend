@@ -431,7 +431,7 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
         formGroup: {
             display: "flex",
             flexDirection: "column",
-            gap: "8px",
+            gap: "10px",
         },
         label: {
             fontSize: "14px",
@@ -456,7 +456,7 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
         tagInputContainer: {
             display: "flex",
             gap: "10px",
-            marginBottom: "10px",
+            marginBottom: "5px",
         },
         flexInput: {
             flex: 1,
@@ -778,7 +778,7 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                                     <div style={{ marginTop: "8px" }}>
                                         <label style={styles.checkboxWrapper}>
                                             <input
-                                                type="checkbox"
+                                                type="checkbox" disabled
                                                 checked={noCurrentProject}
                                                 onChange={(e) => {
                                                     const checked = e.target.checked
@@ -797,7 +797,7 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                                         </label>
                                     </div>
                                 </div>
-
+                                <br></br>
                                 <div style={styles.formGroup}>
                                     <label style={styles.label}>Availability</label>
                                     <div onClick={() => !noCurrentProject && setShowHint(true)} onMouseLeave={() => setShowHint(false)}>
