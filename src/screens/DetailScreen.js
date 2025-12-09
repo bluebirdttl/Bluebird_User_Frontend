@@ -843,7 +843,6 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                                             }
                                         }}
                                         placeholder="e.g. Project Alpha"
-                                        disabled={noCurrentProject}
                                     />
                                     <div style={{ marginTop: "8px" }}>
                                         <label style={styles.checkboxWrapper}>

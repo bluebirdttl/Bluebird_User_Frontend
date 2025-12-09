@@ -298,7 +298,6 @@ export default function InlineActivitiesScreen({ onLogout }) {
                                     <div style={styles.editField}>
                                         <label style={styles.editLabel}>Project Name</label>
                                         <CreatableSelect
-                                            style={styles.editInput}
                                             value={formData.project_name}
                                             onChange={e => setFormData({ ...formData, project_name: e.target.value })}
                                             options={Array.from(new Set(projects.map(p => p.project_name).filter(Boolean))).sort()}

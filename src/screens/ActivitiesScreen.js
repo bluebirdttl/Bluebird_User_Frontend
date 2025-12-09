@@ -5,6 +5,7 @@ import PageLayout from "../components/PageLayout"
 import { theme } from "../utils/theme"
 import { useIsMobile } from "../hooks/useIsMobile"
 import Loader from "../components/Loader"
+import CreatableSelect from "../components/CreatableSelect"
 
 export default function ActivitiesScreen({ onLogout }) {
     const navigate = useNavigate()
@@ -61,6 +62,10 @@ export default function ActivitiesScreen({ onLogout }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        if (!formData.project_name || !formData.project_name.trim()) {
+            alert("Project Name is required")
+            return
+        }
         setSubmitting(true)
         try {
             const res = await fetch(`${API_URL}/api/projects`, {
@@ -237,7 +242,12 @@ export default function ActivitiesScreen({ onLogout }) {
                     <form onSubmit={handleSubmit}>
                         <div style={styles.field}>
                             <label style={styles.label}>Project Name</label>
-                            <input style={styles.input} name="project_name" value={formData.project_name} onChange={handleChange} required />
+                            <CreatableSelect
+                                value={formData.project_name}
+                                onChange={(e) => setFormData({ ...formData, project_name: e.target.value })}
+                                options={Array.from(new Set(projects.map(p => p.project_name).filter(Boolean))).sort()}
+                                placeholder="Select or type project name"
+                            />
                         </div>
                         <div style={styles.field}>
                             <label style={styles.label}>Leader</label>
