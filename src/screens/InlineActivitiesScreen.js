@@ -4,7 +4,6 @@ import { API_URL } from "../config"
 import PageLayout from "../components/PageLayout"
 import { theme } from "../utils/theme"
 import Loader from "../components/Loader"
-import CreatableSelect from "../components/CreatableSelect"
 
 export default function InlineActivitiesScreen({ onLogout }) {
     const navigate = useNavigate()
@@ -297,11 +296,10 @@ export default function InlineActivitiesScreen({ onLogout }) {
                                 <div style={styles.editContainer} onClick={e => e.stopPropagation()}>
                                     <div style={styles.editField}>
                                         <label style={styles.editLabel}>Project Name</label>
-                                        <CreatableSelect
+                                        <input
                                             style={styles.editInput}
                                             value={formData.project_name}
                                             onChange={e => setFormData({ ...formData, project_name: e.target.value })}
-                                            options={Array.from(new Set(projects.map(p => p.project_name).filter(Boolean))).sort()}
                                         />
                                     </div>
                                     <div style={styles.editField}>

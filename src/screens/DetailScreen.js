@@ -4,7 +4,6 @@ import Navbar from "../components/Navbar"
 import { API_URL } from "../config"
 
 import Loader from "../components/Loader"
-import CreatableSelect from "../components/CreatableSelect"
 
 export default function DetailScreen({ employee = null, onBack, onSaveDetails, onLogout, onProfile }) {
     // ---------- LOGIC (Original from User) ----------
@@ -829,9 +828,8 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
 
                                 <div style={styles.formGroup}>
                                     <label style={styles.label}>Current Project</label>
-                                    {/* Custom Creatable Select */}
-                                    <CreatableSelect
-                                        options={allProjects}
+                                    <input
+                                        className="modern-input"
                                         value={currentProject}
                                         onChange={(e) => {
                                             const val = e.target.value
@@ -843,8 +841,13 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                                             }
                                         }}
                                         placeholder="e.g. Project Alpha"
-                                        disabled={noCurrentProject}
+                                        list="detail-project-options"
                                     />
+                                    <datalist id="detail-project-options">
+                                        {allProjects.map((proj, idx) => (
+                                            <option key={idx} value={proj} />
+                                        ))}
+                                    </datalist>
                                     <div style={{ marginTop: "8px" }}>
                                         <label style={styles.checkboxWrapper}>
                                             <input
