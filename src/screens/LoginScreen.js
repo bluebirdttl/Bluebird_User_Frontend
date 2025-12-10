@@ -150,7 +150,7 @@ export default function LoginScreen({ onLogin }) {
 
                         <div className="text-center mt-3">
                             <a
-                                href="https://forms.office.com/r/WukVsTZ1ad"
+                                href="https://forms.gle/68Wx9e9W6wVEw9PTA"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-decoration-none"
