@@ -5,7 +5,6 @@ import { toast } from "react-toastify"
 import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from "react-bootstrap";
 import Navbar from "../components/Navbar"
 import { API_URL } from "../config"
-import { subscribeToPush } from "../utils/notification"
 
 export default function ProfileScreen({ employee = null, onBack, onSaveProfile, onLogout, onProfile }) {
   const ROLE = [
@@ -44,15 +43,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
-  const handleSubscribe = async () => {
-    if (!empid) return toast.error("Employee ID missing");
-    const success = await subscribeToPush(empid);
-    if (success) {
-      toast.success("Notifications enabled successfully!");
-    } else {
-      toast.error("Failed to enable notifications. Ensure you are on HTTPS or Localhost.");
-    }
-  }
+
 
 
   const originalIdRef = React.useRef(null)
@@ -274,14 +265,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
                 ← Back
               </Button>
             )}
-            <Button
-              variant="outline-primary"
-              size="sm"
-              className="ms-2 rounded-0"
-              onClick={handleSubscribe}
-            >
-              🔔 Enable Notifications
-            </Button>
+
           </Card.Header>
           <Card.Body className="p-4">
             {error && <Alert variant="danger" className="mb-4 rounded-0">{error}</Alert>}

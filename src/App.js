@@ -12,6 +12,8 @@ import ActivitiesScreen from "./screens/ActivitiesScreen"
 import InlineActivitiesScreen from "./screens/InlineActivitiesScreen"
 
 import PWAInstallPopup from "./components/PWAInstallPopup"
+import NotificationPermissionPopup from "./components/NotificationPermissionPopup"
+import { subscribeToPush } from "./utils/notification"
 
 export default function App() {
   // PWA Install Prompt State
@@ -45,11 +47,46 @@ export default function App() {
     // We've used the prompt, and can't use it again, throw it away
     setDeferredPrompt(null);
     setShowInstallPopup(false);
+    checkNotificationPermission();
   };
 
   const handleClosePopup = () => {
     setShowInstallPopup(false);
+    checkNotificationPermission();
   };
+
+  // Notification Popup State
+  const [showNotificationPopup, setShowNotificationPopup] = useState(false);
+
+  // Check notification permission queue
+  const checkNotificationPermission = () => {
+    if (!user) return;
+
+    // Check if supported first
+    if (!('Notification' in window)) return;
+
+    // Check if already granted or denied
+    if (Notification.permission === 'granted' || Notification.permission === 'denied') return;
+
+    // Check if we already showed it and user cancelled (using localStorage to persist across refreshes if needed, 
+    // but user said "once accepted... should not appear". Implicitly if cancelled, it might appear again next login? 
+    // User said "shows option... Cancel... once accepted... should not appear". 
+    // Usually "Cancel" means "Not now", so it might show again. 
+    // "Accepted" means permission 'granted'.
+
+    setShowNotificationPopup(true);
+  }
+
+  const handleEnableNotifications = async () => {
+    if (user && user.empid) {
+      await subscribeToPush(user.empid);
+      setShowNotificationPopup(false);
+    }
+  }
+
+  const handleCancelNotifications = () => {
+    setShowNotificationPopup(false);
+  }
 
   // Check if we should show the popup
   // Show if:
@@ -78,8 +115,15 @@ export default function App() {
   React.useEffect(() => {
     if (deferredPrompt && user) {
       setShowInstallPopup(true);
+    } else if (user) {
+      // If no install prompt needed (already installed or not supported), check notification immediately
+      // But wait a tick to ensure install prompt effect didn't just fire
+      const t = setTimeout(() => {
+        if (!showInstallPopup) checkNotificationPermission();
+      }, 1000);
+      return () => clearTimeout(t);
     }
-  }, [deferredPrompt, user]);
+  }, [deferredPrompt, user, showInstallPopup]);
 
   const handleLogin = (userData) => {
     try {
@@ -212,6 +256,14 @@ export default function App() {
           <PWAInstallPopup
             onInstall={handleInstallClick}
             onClose={handleClosePopup}
+          />
+        )
+      }
+      {
+        showNotificationPopup && !showInstallPopup && (
+          <NotificationPermissionPopup
+            onEnable={handleEnableNotifications}
+            onCancel={handleCancelNotifications}
           />
         )
       }

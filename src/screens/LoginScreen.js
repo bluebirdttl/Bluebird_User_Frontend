@@ -4,6 +4,7 @@ import { Container, Card, Form } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { API_URL } from "../config";
 
+
 export default function LoginScreen({ onLogin }) {
     const navigate = useNavigate();
 
@@ -50,6 +51,9 @@ export default function LoginScreen({ onLogin }) {
 
             if (data.success) {
                 toast.success(`Welcome back, ${data.user.name || "User"}!`);
+
+
+
                 if (typeof onLogin === "function") onLogin(data.user);
 
                 const role_type = (data.user?.role_type || "").trim().toLowerCase();

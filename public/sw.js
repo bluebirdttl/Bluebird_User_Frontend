@@ -5,8 +5,8 @@ self.addEventListener('push', function (event) {
         const title = data.title || "TATA PWA";
         const options = {
             body: data.message || "New notification",
-            icon: '/logo192.png', // Ensure this icon exists or use default
-            badge: '/logo192.png',
+            icon: '/Logo/MainLogo.png',
+            badge: '/Logo/MainLogo.png',
             data: { url: data.url || '/' }
         };
 
