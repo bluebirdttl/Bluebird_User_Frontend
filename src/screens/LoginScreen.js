@@ -158,7 +158,7 @@ export default function LoginScreen({ onLogin }) {
                             </a>
                         </div>
                         <div className="text-center mt-4 text-muted small" style={{ color: "#888" }}>
-                            © 2025 Tata Technologies
+                            ©2025 Tata Technologies
                         </div>
                     </Card.Body>
                 </Card>
