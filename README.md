@@ -76,3 +76,7 @@ workload_frontend/
 
 - **Authentication:** Routes are protected to ensure only logged-in users access the dashboard.
 - **Role-Based Access:** Specific views (like Manager Dashboard) are restricted based on user roles (`Manager` vs `Employee`).
+
+## 🔗 Related Repositories
+
+- **Backend Repository:** [EmployeeAvailabilityManagementTool--Backend](https://github.com/AbhinavPandey12/EmployeeAvailabilityManagementTool--Backend.git)
