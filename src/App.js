@@ -19,8 +19,6 @@ export default function App() {
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallPopup, setShowInstallPopup] = useState(false);
-  const [installDismissed, setInstallDismissed] = useState(false);
-  const [notificationDismissed, setNotificationDismissed] = useState(false);
 
   // initialize from sessionStorage so reload keeps logged-in user
   const initialUser = (() => {
@@ -67,7 +65,6 @@ export default function App() {
 
   const handleClosePopup = () => {
     setShowInstallPopup(false);
-    setInstallDismissed(true);
     checkNotificationPermission();
   };
 
@@ -91,10 +88,10 @@ export default function App() {
     // "Accepted" means permission 'granted'.
 
     // Double check we are not already showing it
-    if (showNotificationPopup || notificationDismissed) return;
+    if (showNotificationPopup) return;
 
     setShowNotificationPopup(true);
-  }, [user, showNotificationPopup, notificationDismissed]);
+  }, [user, showNotificationPopup]);
 
   const handleEnableNotifications = async () => {
     if (user && user.empid) {
@@ -105,7 +102,6 @@ export default function App() {
 
   const handleCancelNotifications = () => {
     setShowNotificationPopup(false);
-    setNotificationDismissed(true);
   }
 
   // Check if we should show the popup
@@ -122,7 +118,7 @@ export default function App() {
 
 
   React.useEffect(() => {
-    if (deferredPrompt && user && !installDismissed) {
+    if (deferredPrompt && user) {
       setShowInstallPopup(true);
     } else if (user) {
       // If no install prompt needed (already installed or not supported), check notification immediately
@@ -132,7 +128,7 @@ export default function App() {
       }, 1000);
       return () => clearTimeout(t);
     }
-  }, [deferredPrompt, user, showInstallPopup, checkNotificationPermission, installDismissed]);
+  }, [deferredPrompt, user, showInstallPopup, checkNotificationPermission]);
 
   const handleLogin = (userData) => {
     try {
