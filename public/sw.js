@@ -10,11 +10,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('push', function (event) {
     if (event.data) {
         const data = event.data.json();
-        const title = data.title || "TATA PWA";
+        const title = data.title || "Bluebird Star App";
         const options = {
             body: data.message || "New notification",
-            icon: '/Logo/Workload.png',
-            badge: '/Logo/Workload.png',
+            icon: '/Logo/MainLogo.png',
+            badge: '/Logo/MainLogo.png',
             data: { url: data.url || '/' }
         };
 

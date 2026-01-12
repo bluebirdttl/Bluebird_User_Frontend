@@ -23,7 +23,7 @@ export default function LoginScreen({ onLogin }) {
             return;
         }
 
-        const emailRegex = /^[^\s@]+@workload\.com$/;
+        const emailRegex = /^[^\s@]+@tatatechnologies\.com$/;
         if (!emailRegex.test(email)) {
             const msg = "Please enter a valid email address.";
             toast.warn(msg);
@@ -99,7 +99,7 @@ export default function LoginScreen({ onLogin }) {
                 <Card className="p-4 shadow-sm border-0" style={{ maxWidth: "400px", width: "100%", borderRadius: "0px" }}>
                     <Card.Body>
                         <div className="text-center mb-4">
-                            <img src="/Logo/Workload.png" alt="Bluebird Logo" style={{ maxWidth: "150px", marginBottom: "20px" }} />
+                            <img src="/Logo/MainLogo.png" alt="Bluebird Logo" style={{ maxWidth: "150px", marginBottom: "20px" }} />
                             <h2 className="fw-bold mt-0" style={{ color: "#312e81", fontSize: "26px" }}>Login</h2>
                         </div>
 
@@ -110,7 +110,7 @@ export default function LoginScreen({ onLogin }) {
                                 <Form.Label className="fw-bold" style={{ color: "#374151" }}>Email Address</Form.Label>
                                 <Form.Control
                                     type="email"
-                                    placeholder="Enter your email @workload.com"
+                                    placeholder="Enter your email @tatatechnologies.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     disabled={loading}
