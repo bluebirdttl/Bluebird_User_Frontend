@@ -85,8 +85,5 @@ Bluebird Star App is fully optimized for mobile and desktop installation.
 
 ## 🔗 Repository Links
 
-- **Backend Repository:** [Bluebird Star Backend](https://github.com/AbhinavPandey12/EmployeeAvailabilityManagementTool--Backend.git)
+- **Backend Repository:** [Bluebird Star Backend](https://github.com/bluebirdttl/Bluebird_User_Backend.git)
 
----
-
-Developed with ❤️ by **Abhinav Pandey**
