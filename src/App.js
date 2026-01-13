@@ -56,13 +56,14 @@ export default function App() {
     // We've used the prompt, and can't use it again, throw it away
     setDeferredPrompt(null);
     setShowInstallPopup(false);
-    checkNotificationPermission();
+    // User said only show notifications if they haven't downloaded (installed) the app
+    // Since they just installed, we skip the notification popup here
   };
 
   const handleClosePopup = () => {
     localStorage.setItem("pwa_install_dismissed", "true");
     setShowInstallPopup(false);
-    checkNotificationPermission();
+    // Do not call checkNotificationPermission immediately to allow user to use the app
   };
 
   // Notification Popup State
@@ -71,6 +72,11 @@ export default function App() {
   // Check notification permission queue
   const checkNotificationPermission = () => {
     if (!user) return;
+
+    // Check if running in standalone mode (already downloaded/installed)
+    // User requirement: only show notifications if they haven't downloaded the app
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    if (isStandalone) return;
 
     // Check if supported first
     if (!("Notification" in window)) return;
@@ -132,16 +138,21 @@ export default function App() {
   // console.log("[App] Current user state:", user);
 
   React.useEffect(() => {
+    if (!user) return;
+
     const isPwaDismissed =
       localStorage.getItem("pwa_install_dismissed") === "true";
-    if (deferredPrompt && user && !isPwaDismissed) {
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+
+    if (deferredPrompt && !isPwaDismissed) {
       setShowInstallPopup(true);
-    } else if (user) {
-      // If no install prompt needed (already installed or not supported), check notification immediately
-      // But wait a tick to ensure install prompt effect didn't just fire
+    } else if (!isStandalone) {
+      // If no install prompt needed (already dismissed or not supported), check notification
+      // BUT only if NOT in standalone mode (per user request)
+      // And wait 3 seconds to ensure they can access the app first
       const t = setTimeout(() => {
         if (!showInstallPopup) checkNotificationPermission();
-      }, 1000);
+      }, 3000);
       return () => clearTimeout(t);
     }
   }, [deferredPrompt, user, showInstallPopup]);
