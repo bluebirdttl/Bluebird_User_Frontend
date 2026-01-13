@@ -1,19 +1,19 @@
 {
-  "short_name": "WorkLoad",
-  "name": "WorkLoad",
+  "short_name": "Bluebird Star App",
+  "name": "Bluebird Star App",
   "icons": [
     {
-      "src": "Logo/Workload.png",
+      "src": "Logo/MainLogo.png",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/png"
     },
     {
-      "src": "Logo/Workload.png",
+      "src": "Logo/MainLogo.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "Logo/Workload.png",
+      "src": "Logo/MainLogo.png",
       "type": "image/png",
       "sizes": "512x512"
     }
