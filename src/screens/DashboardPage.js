@@ -292,7 +292,7 @@ export default function DashboardPage({ onLogout }) {
 
     return (
         <div className="min-vh-100 bg-light">
-            <Navbar user={user} onLogout={handleLogout} title="Manager Dashboard" />
+            <Navbar user={user} onLogout={handleLogout} title="Talent Dashboard" />
 
             <Container fluid="lg" className="py-4">
                 {/* Heading Removed */}
