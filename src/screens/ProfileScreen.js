@@ -274,7 +274,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-bold small text-muted">Full Name</Form.Label>
-                  <Form.Control value={name} onChange={(e) => setName(e.target.value)} disabled className="rounded-0" />
+                  <Form.Control value={name} onChange={(e) => setName(e.target.value)} className="rounded-0" />
                 </Form.Group>
               </Col>
               <Col md={6}>
