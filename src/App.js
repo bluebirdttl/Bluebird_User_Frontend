@@ -69,6 +69,20 @@ export default function App() {
   // Notification Popup State
   const [showNotificationPopup, setShowNotificationPopup] = useState(false);
 
+  
+  // initialize from sessionStorage so reload keeps logged-in user
+  const initialUser = (() => {
+    try {
+      const raw = sessionStorage.getItem("user");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const [user, setUser] = useState(initialUser);
+  // console.log("[App] Current user state:", user);
+
   // Check notification permission queue
   const checkNotificationPermission = React.useCallback(() => {
     if (!user) return;
@@ -124,18 +138,6 @@ export default function App() {
   // Actually, let's sync showInstallPopup with deferredPrompt presence initially?
   // Or just use a separate effect.
 
-  // initialize from sessionStorage so reload keeps logged-in user
-  const initialUser = (() => {
-    try {
-      const raw = sessionStorage.getItem("user");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  })();
-
-  const [user, setUser] = useState(initialUser);
-  // console.log("[App] Current user state:", user);
 
   React.useEffect(() => {
     if (!user) return;
