@@ -277,7 +277,7 @@ export default function HomeScreen({ onLogout, employee }) {
   return (
     <div className="min-vh-100 bg-light">
       <div className="sticky-top">
-        <Navbar user={employee} onLogout={onLogout} title="Employee Directory" />
+        <Navbar user={employee} onLogout={onLogout} title="Talent Directory" />
       </div>
 
       <Container fluid className="py-4">

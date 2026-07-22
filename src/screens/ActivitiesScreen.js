@@ -219,7 +219,7 @@ export default function ActivitiesScreen({ onLogout }) {
 
     return (
         <div className="min-vh-100 bg-light">
-            <Navbar user={user} onLogout={onLogout} title="Activities Manager" />
+            <Navbar user={user} onLogout={onLogout} title="Manage Activity" />
 
             <Container fluid className="px-4 py-4">
                 <Row className="g-4">

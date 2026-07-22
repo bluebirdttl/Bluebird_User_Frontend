@@ -794,7 +794,7 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                 <>
                     {/* Navbar */}
                     {/* Navbar */}
-                    <Navbar user={employee} onLogout={onLogout} title="Details" />
+                    <Navbar user={employee} onLogout={onLogout} title="User Dashboard" />
 
                     <div className="responsive-container">
                         {/* Header */}

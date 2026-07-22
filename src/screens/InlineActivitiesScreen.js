@@ -402,7 +402,7 @@ export default function InlineActivitiesScreen({ onLogout }) {
     }
 
     return (
-        <PageLayout user={user} title="Inline Activities" onLogout={onLogout} fluid>
+        <PageLayout user={user} title="Activity Dashboard" onLogout={onLogout} fluid>
             {/* Search and Filter Bar - Matching Employee Directory Style */}
             <Card className="mb-4 shadow-sm border-0" style={{ borderRadius: "8px" }}>
                 <Card.Body className="p-3">

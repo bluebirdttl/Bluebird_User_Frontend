@@ -122,7 +122,7 @@ export default function Navbar_IC({ user, onLogout, title = "Employee Dashboard"
                                 <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
                                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
                             </svg>
-                            Details
+                            User Dashboard
                         </Nav.Link>
                         <Nav.Link onClick={() => { handleClose(); navigate("/inline-activities"); }} className="text-white px-2 py-2 rounded d-flex align-items-center" style={{ fontWeight: "500", letterSpacing: "0.3px", transition: "all 0.2s" }}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="me-3 opacity-75">
@@ -133,7 +133,7 @@ export default function Navbar_IC({ user, onLogout, title = "Employee Dashboard"
                                 <line x1="3" y1="12" x2="3.01" y2="12"></line>
                                 <line x1="3" y1="18" x2="3.01" y2="18"></line>
                             </svg>
-                            Inline Activities
+                            Activity Dashboard
                         </Nav.Link>
                         <Nav.Link onClick={() => { handleClose(); window.open("https://forms.gle/68Wx9e9W6wVEw9PTA", "_blank"); }} className="text-white px-2 py-2 rounded d-flex align-items-center" style={{ fontWeight: "500", letterSpacing: "0.3px", transition: "all 0.2s" }}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="me-3 opacity-75">
