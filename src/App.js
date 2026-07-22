@@ -70,7 +70,7 @@ export default function App() {
   const [showNotificationPopup, setShowNotificationPopup] = useState(false);
 
   // Check notification permission queue
-  const checkNotificationPermission = () => {
+  const checkNotificationPermission = React.useCallback(() => {
     if (!user) return;
 
     // Check if running in standalone mode (already downloaded/installed)
@@ -101,7 +101,7 @@ export default function App() {
     if (showNotificationPopup) return;
 
     setShowNotificationPopup(true);
-  };
+  }, [user, showNotificationPopup]);
 
   const handleEnableNotifications = async () => {
     if (user && user.empid) {
@@ -155,7 +155,7 @@ export default function App() {
       }, 3000);
       return () => clearTimeout(t);
     }
-  }, [deferredPrompt, user, showInstallPopup]);
+  }, [deferredPrompt, user, showInstallPopup, checkNotificationPermission]);
 
   const handleLogin = (userData) => {
     try {
