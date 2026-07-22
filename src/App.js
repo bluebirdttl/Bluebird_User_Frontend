@@ -8,14 +8,14 @@ import {
 } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import LoginScreen from "./screens/LoginScreen";
-import HomeScreen from "./screens/HomeScreen";
+import HomeScreen from "./screens/TalentDirectory";
 import ProfileScreen from "./screens/ProfileScreen";
-import DetailScreen from "./screens/DetailScreen";
-import DashboardPage from "./screens/DashboardPage";
+import DetailScreen from "./screens/UserDashboard";
+import DashboardPage from "./screens/TalentDashboard";
 import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 
-import ActivitiesScreen from "./screens/ActivitiesScreen";
-import InlineActivitiesScreen from "./screens/InlineActivitiesScreen";
+import ActivitiesScreen from "./screens/ManageActivity";
+import InlineActivitiesScreen from "./screens/ActivityDashboard";
 
 import PWAInstallPopup from "./components/PWAInstallPopup";
 import NotificationPermissionPopup from "./components/NotificationPermissionPopup";
