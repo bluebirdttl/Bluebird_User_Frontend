@@ -621,7 +621,7 @@ export default function InlineActivitiesScreen({ onLogout }) {
                                         <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
                                             <span style={{ display: "flex", alignItems: "center" }}>
                                                 <Icons.Calendar />
-                                                Registration Ends: {p.end_date ? p.end_date.split("-").reverse().join("-") : ""}
+                                                Interest Window Ends: {p.end_date ? p.end_date.split("-").reverse().join("-") : ""}
                                             </span>
                                             {p.creator_name && (
                                                 <span style={{ display: "flex", alignItems: "center", color: "#6b7280" }}>

@@ -264,7 +264,7 @@ export default function ActivitiesScreen({ onLogout }) {
                                     <Row>
                                         <Col md={6}>
                                             <Form.Group className="mb-3">
-                                                <Form.Label className="fw-semibold">End Date</Form.Label>
+                                                <Form.Label className="fw-semibold">Interest Window End Date</Form.Label>
                                                 <Form.Control
                                                     type="date"
                                                     name="end_date"
