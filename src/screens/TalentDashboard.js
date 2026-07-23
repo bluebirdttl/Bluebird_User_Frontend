@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { API_URL } from "../config";
 import Loader from "../components/Loader";
-import { Container, Row, Col, Card, Form, Alert } from "react-bootstrap";
+import { Container, Row, Col, Card, Alert } from "react-bootstrap";
 
 // Hook to track last updated time for specific data
 const useLastUpdated = (data) => {
@@ -27,16 +27,24 @@ export default function DashboardPage({ onLogout }) {
     const [metrics, setMetrics] = useState({
         partialHoursDistribution: {},
         clusters: { "MEBM": 0, "M&T": 0, "S&PS Insitu": 0, "S&PS Exsitu": 0 },
-        roles: {}
+        roles: {},
+        today: { totalPartialHours: 0, totalAvailableHours: 0, partialEmployeeCount: 0, availableEmployeeCount: 0 },
+        weekly: { totalPartialHours: 0, totalAvailableHours: 0, partialEmployeeCount: 0, availableEmployeeCount: 0 },
+        monthly: { totalPartialHours: 0, totalAvailableHours: 0, partialEmployeeCount: 0, availableEmployeeCount: 0 }
     });
-    const [capacityFilter, setCapacityFilter] = useState("All"); // All, Daily, Weekly, Monthly
 
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
 
     // Calculate last updated times
-    const capacityData = { partial: metrics.totalPartialHours, available: metrics.totalAvailableHours };
-    const capacityLastUpdated = useLastUpdated(capacityData);
+    const todayCapacityData = { partial: metrics.today?.totalPartialHours, available: metrics.today?.totalAvailableHours };
+    const todayCapacityLastUpdated = useLastUpdated(todayCapacityData);
+
+    const weeklyCapacityData = { partial: metrics.weekly?.totalPartialHours, available: metrics.weekly?.totalAvailableHours };
+    const weeklyCapacityLastUpdated = useLastUpdated(weeklyCapacityData);
+
+    const monthlyCapacityData = { partial: metrics.monthly?.totalPartialHours, available: metrics.monthly?.totalAvailableHours };
+    const monthlyCapacityLastUpdated = useLastUpdated(monthlyCapacityData);
 
     const clustersLastUpdated = useLastUpdated(metrics.clusters);
     const rolesLastUpdated = useLastUpdated(metrics.roles);
@@ -60,13 +68,40 @@ export default function DashboardPage({ onLogout }) {
     useEffect(() => {
         const fetchMetrics = async () => {
             try {
-                const res = await fetch(`${API_URL}/api/employees/dashboard-metrics?range=${capacityFilter}`, {
-                    method: "GET",
-                    headers: { "Content-Type": "application/json" }
+                const extractCapacity = (data, key) => {
+                    if (!data) return { totalPartialHours: 0, totalAvailableHours: 0, partialEmployeeCount: 0, availableEmployeeCount: 0 };
+                    if (data[key] && (data[key].totalAvailableHours !== undefined || data[key].totalPartialHours !== undefined)) {
+                        return data[key];
+                    }
+                    return {
+                        totalPartialHours: data.totalPartialHours || 0,
+                        totalAvailableHours: data.totalAvailableHours || 0,
+                        partialEmployeeCount: data.partialEmployeeCount || 0,
+                        availableEmployeeCount: data.availableEmployeeCount || 0
+                    };
+                };
+
+                const [dailyRes, weeklyRes, monthlyRes] = await Promise.all([
+                    fetch(`${API_URL}/api/employees/dashboard-metrics?range=Daily`),
+                    fetch(`${API_URL}/api/employees/dashboard-metrics?range=Weekly`),
+                    fetch(`${API_URL}/api/employees/dashboard-metrics?range=Monthly`)
+                ]);
+
+                if (!dailyRes.ok || !weeklyRes.ok || !monthlyRes.ok) {
+                    throw new Error("Failed to fetch dashboard metrics");
+                }
+
+                const dailyData = await dailyRes.json();
+                const weeklyData = await weeklyRes.json();
+                const monthlyData = await monthlyRes.json();
+
+                setMetrics({
+                    clusters: dailyData.clusters || {},
+                    roles: dailyData.roles || {},
+                    today: extractCapacity(dailyData, "today"),
+                    weekly: extractCapacity(weeklyData, "weekly"),
+                    monthly: extractCapacity(monthlyData, "monthly")
                 });
-                if (!res.ok) throw new Error(`Failed to fetch: ${res.status} ${res.statusText}`);
-                const data = await res.json();
-                setMetrics(data);
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -74,7 +109,7 @@ export default function DashboardPage({ onLogout }) {
             }
         };
         fetchMetrics();
-    }, [capacityFilter]);
+    }, []);
 
     const handleLogout = () => {
         if (onLogout) {
@@ -295,57 +330,86 @@ export default function DashboardPage({ onLogout }) {
             <Navbar user={user} onLogout={handleLogout} title="Talent Dashboard " />
 
             <Container fluid="lg" className="py-4">
-                {/* Heading Removed */}
-
                 {error && (
                     <Alert variant="danger" className="mb-4">
                         Error loading data: {error}
                     </Alert>
                 )}
 
-                <Row className="g-4">
-                    {/* 1. Capacity Overview */}
-                    <Col xs={12} lg={4}>
+                {/* Line 1: Today, This Week, This Month Capacity Cards */}
+                <Row className="g-4 mb-4">
+                    {/* 1. Today Capacity Overview */}
+                    <Col xs={12} md={4}>
                         <ChartCard
-                            title="Capacity Overview"
-                            updatedAt={capacityLastUpdated}
-                            action={
-                                <Form.Select
-                                    size="sm"
-                                    value={capacityFilter}
-                                    onChange={(e) => setCapacityFilter(e.target.value)}
-                                    style={{ width: "auto", fontWeight: "500" }}
-                                >
-                                    {/* <option value="All">All Time</option> */}
-                                    <option value="Daily">Today</option>
-                                    <option value="Weekly">This Week</option>
-                                    <option value="Monthly">This Month</option>
-                                </Form.Select>
-                            }
+                            title="Capacity Overview - Today"
+                            updatedAt={todayCapacityLastUpdated}
                         >
                             <div className="w-100 h-100 d-flex flex-column">
-                                <span className="small text-muted mb-2">Assuming 176 hrs/month per person</span>
+                                <span className="small text-muted mb-2">Assuming 8 hrs/day per person</span>
                                 <div style={{ minHeight: "300px", width: "100%" }}>
                                     <CapacityComparisonChart
-                                        partial={metrics.totalPartialHours || 0}
-                                        available={metrics.totalAvailableHours || 0}
-                                        partialCount={metrics.partialEmployeeCount || 0}
-                                        availableCount={metrics.availableEmployeeCount || 0}
+                                        partial={metrics.today?.totalPartialHours || 0}
+                                        available={metrics.today?.totalAvailableHours || 0}
+                                        partialCount={metrics.today?.partialEmployeeCount || 0}
+                                        availableCount={metrics.today?.availableEmployeeCount || 0}
                                     />
                                 </div>
                             </div>
                         </ChartCard>
                     </Col>
 
-                    {/* 2. Users per Cluster */}
-                    <Col xs={12} lg={4}>
+                    {/* 2. This Week Capacity Overview */}
+                    <Col xs={12} md={4}>
+                        <ChartCard
+                            title="Capacity Overview - This Week"
+                            updatedAt={weeklyCapacityLastUpdated}
+                        >
+                            <div className="w-100 h-100 d-flex flex-column">
+                                <span className="small text-muted mb-2">Remaining days in current week</span>
+                                <div style={{ minHeight: "300px", width: "100%" }}>
+                                    <CapacityComparisonChart
+                                        partial={metrics.weekly?.totalPartialHours || 0}
+                                        available={metrics.weekly?.totalAvailableHours || 0}
+                                        partialCount={metrics.weekly?.partialEmployeeCount || 0}
+                                        availableCount={metrics.weekly?.availableEmployeeCount || 0}
+                                    />
+                                </div>
+                            </div>
+                        </ChartCard>
+                    </Col>
+
+                    {/* 3. This Month Capacity Overview */}
+                    <Col xs={12} md={4}>
+                        <ChartCard
+                            title="Capacity Overview - This Month"
+                            updatedAt={monthlyCapacityLastUpdated}
+                        >
+                            <div className="w-100 h-100 d-flex flex-column">
+                                <span className="small text-muted mb-2">Assuming 176 hrs/month per person</span>
+                                <div style={{ minHeight: "300px", width: "100%" }}>
+                                    <CapacityComparisonChart
+                                        partial={metrics.monthly?.totalPartialHours || 0}
+                                        available={metrics.monthly?.totalAvailableHours || 0}
+                                        partialCount={metrics.monthly?.partialEmployeeCount || 0}
+                                        availableCount={metrics.monthly?.availableEmployeeCount || 0}
+                                    />
+                                </div>
+                            </div>
+                        </ChartCard>
+                    </Col>
+                </Row>
+
+                {/* Line 2: Cluster and Role Distribution Cards */}
+                <Row className="g-4">
+                    {/* 4. Users per Cluster */}
+                    <Col xs={12} md={6}>
                         <ChartCard title="Cluster based Distribution" updatedAt={clustersLastUpdated}>
                             <HorizontalBarChart data={metrics.clusters} color="#3b82f6" />
                         </ChartCard>
                     </Col>
 
-                    {/* 3. Users per Role */}
-                    <Col xs={12} lg={4}>
+                    {/* 5. Users per Role */}
+                    <Col xs={12} md={6}>
                         <ChartCard title="Role based Distribution" updatedAt={rolesLastUpdated}>
                             <PieChart data={metrics.roles} />
                         </ChartCard>
