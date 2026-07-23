@@ -7,13 +7,13 @@ import { Container, Row, Col, Card, Alert } from "react-bootstrap";
 
 // Hook to track last updated time for specific data
 const useLastUpdated = (data) => {
-    const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleDateString());
+    const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleDateString("en-GB"));
     const prevDataRef = React.useRef(data);
 
     useEffect(() => {
         // Simple deep comparison via JSON.stringify
         if (JSON.stringify(data) !== JSON.stringify(prevDataRef.current)) {
-            setLastUpdated(new Date().toLocaleDateString());
+            setLastUpdated(new Date().toLocaleDateString("en-GB"));
             prevDataRef.current = data;
         }
     }, [data]);
@@ -144,7 +144,7 @@ export default function DashboardPage({ onLogout }) {
                     {children}
                 </div>
                 <div className="text-muted small text-end mt-4 pt-2 border-top">
-                    Updated at {updatedAt || new Date().toLocaleDateString()}
+                    Updated at {updatedAt || new Date().toLocaleDateString("en-GB")}
                 </div>
             </Card.Body>
         </Card>
