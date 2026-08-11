@@ -9,16 +9,17 @@ import { API_URL } from "../config"
 export default function ProfileScreen({ employee = null, onBack, onSaveProfile, onLogout, onProfile }) {
   const ROLE = [
     { label: "Software Developer", value: "Software Developer" },
-    { label: "Engagement Manager", value: "Engagement Manager" },
     { label: "Tech Lead", value: "Tech Lead" },
     { label: "Data Analyst", value: "Data Analyst" },
     { label: "Consulting - PLM", value: "Consulting - PLM" },
     { label: "Consulting - Manufacturing", value: "Consulting - Manufacturing" },
     { label: "Consulting - Aerospace", value: "Consulting - Aerospace" },
-    { label: "Head of Bluebird", value: "Head of Bluebird" },
-    { label: "Aerospace role", value: "Aerospace role" },
-    { label: "Presentation role", value: "Presentation role" },
-    { label: "Other", value: "Other" },
+    { label: "Technical Content Creator", value: "Technical Content Creator" },
+    { label: "Creative Content Creator", value: "Creative Content Creator" },
+    { label: "Process Analyst", value: "Process Analyst" },
+    { label: "Event Manager", value: "Event Manager" },
+    { label: "Problem Solver", value: "Problem Solver" },
+    { label: "Project Coordinator", value: "Project Coordinator" },
   ]
 
   const CLUSTER = [
@@ -26,6 +27,8 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
     { label: "M&T", value: "M&T" },
     { label: "S&PS Insitu", value: "S&PS Insitu" },
     { label: "S&PS Exsitu", value: "S&PS Exsitu" },
+    { label: "JSO", value: "JSO" },
+    { label: "Airframe", value: "Airframe" },
     { label: "Multiple", value: "Multiple" },
   ]
 
