@@ -120,17 +120,17 @@ export default function ActivitiesScreen({ onLogout }) {
             })
 
             if (res.ok) {
-                toast.success(editingId ? "Project updated successfully!" : "Project created successfully!")
+                toast.success(editingId ? "Activity updated successfully!" : "Activity created successfully!")
                 setFormData(initialFormData)
                 setEditingId(null)
                 fetchProjects()
             } else {
                 const errData = await res.json().catch(() => ({}))
-                toast.error(errData.error || (editingId ? "Failed to update project" : "Failed to create project"))
+                toast.error(errData.error || (editingId ? "Failed to update activity" : "Failed to create activity"))
             }
         } catch (err) {
-            console.error("Error submitting project", err)
-            toast.error("Error submitting project")
+            console.error("Error submitting activity", err)
+            toast.error("Error submitting activity")
         } finally {
             setSubmitting(false)
         }
@@ -154,7 +154,7 @@ export default function ActivitiesScreen({ onLogout }) {
     }
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this project?")) return
+        if (!window.confirm("Are you sure you want to delete this activity?")) return
         try {
             const res = await fetch(`${API_URL}/api/projects/${id}`, {
                 method: "DELETE",
@@ -164,10 +164,10 @@ export default function ActivitiesScreen({ onLogout }) {
             if (res.ok) {
                 fetchProjects()
             } else {
-                toast.error("Failed to delete project")
+                toast.error("Failed to delete activity")
             }
         } catch (err) {
-            console.error("Error deleting project", err)
+            console.error("Error deleting activity", err)
         }
     }
 
@@ -223,7 +223,7 @@ export default function ActivitiesScreen({ onLogout }) {
 
             <Container fluid className="px-4 py-4">
                 <Row className="g-4">
-                    {/* Create Project Form */}
+                    {/* Create Activity Form */}
                     <Col lg={4} md={12}> {/* Reduced col width slightly for better proportion */}
                         <Card className="shadow-sm border-0 h-100" style={{ borderRadius: "4px" }}>
                             <Card.Header className="bg-white border-bottom-0 pt-4 pb-0">
@@ -232,12 +232,12 @@ export default function ActivitiesScreen({ onLogout }) {
                             <Card.Body>
                                 <Form onSubmit={handleSubmit}>
                                     <Form.Group className="mb-3">
-                                        <Form.Label className="fw-semibold">Project Name</Form.Label>
+                                        <Form.Label className="fw-semibold">Activity Name</Form.Label>
                                         <CreatableSelect
                                             value={formData.project_name}
                                             onChange={(e) => setFormData({ ...formData, project_name: e.target.value })}
                                             options={Array.from(new Set(projects.map(p => p.project_name).filter(Boolean))).sort()}
-                                            placeholder="Select or type project name"
+                                            placeholder="Select or type activity name"
                                         />
                                     </Form.Group>
 
@@ -326,7 +326,7 @@ export default function ActivitiesScreen({ onLogout }) {
 
                                     <div className="d-grid gap-2">
                                         <Button type="submit" variant="primary" className="fw-bold" disabled={submitting}>
-                                            {submitting ? <Spinner animation="border" size="sm" /> : (editingId ? "Update Project" : "Create Project")}
+                                            {submitting ? <Spinner animation="border" size="sm" /> : (editingId ? "Update Activity" : "Create Activity")}
                                         </Button>
                                         {editingId && (
                                             <Button variant="outline-secondary" className="fw-bold" onClick={handleCancelEdit} disabled={submitting}>
@@ -339,7 +339,7 @@ export default function ActivitiesScreen({ onLogout }) {
                         </Card>
                     </Col>
 
-                    {/* Existing Projects List */}
+                    {/* Existing Activities List */}
                     <Col lg={8} md={12}>
                         <Card className="shadow-sm border-0 h-100" style={{ borderRadius: "4px" }}>
                             <Card.Header className="bg-white border-bottom-0 pt-4 pb-0">
@@ -349,13 +349,13 @@ export default function ActivitiesScreen({ onLogout }) {
                                 {loading ? (
                                     <div style={{ minHeight: "400px", display: "flex", justifyContent: "center", alignItems: "center" }}><Loader /></div>
                                 ) : projects.length === 0 ? (
-                                    <div className="text-muted text-center py-5">No projects found.</div>
+                                    <div className="text-muted text-center py-5">No activities found.</div>
                                 ) : (
                                     <div className="table-responsive">
                                         <Table hover className="align-middle">
                                             <thead className="bg-light">
                                                 <tr>
-                                                    <th className="border-0">Project</th>
+                                                    <th className="border-0">Activity</th>
                                                     <th className="border-0">Leader</th>
                                                     <th className="border-0">Status</th>
                                                     <th className="border-0 text-end">Actions</th>
