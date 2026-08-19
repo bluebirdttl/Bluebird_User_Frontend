@@ -13,6 +13,7 @@ export default function ActivitiesScreen({ onLogout }) {
 
     const initialFormData = {
         project_name: "",
+        activity_type: "",
         leader_name: "",
         required_skills: "",
         end_date: "",
@@ -187,6 +188,7 @@ export default function ActivitiesScreen({ onLogout }) {
         }
         setFormData({
             project_name: selectedProject.project_name,
+            activity_type: selectedProject.activity_type || "",
             leader_name: selectedProject.leader_name,
             required_skills: Array.isArray(selectedProject.required_skills) ? selectedProject.required_skills.join(", ") : (selectedProject.required_skills || ""),
             end_date: selectedProject.end_date,
@@ -227,18 +229,34 @@ export default function ActivitiesScreen({ onLogout }) {
                     <Col lg={4} md={12}> {/* Reduced col width slightly for better proportion */}
                         <Card className="shadow-sm border-0 h-100" style={{ borderRadius: "4px" }}>
                             <Card.Header className="bg-white border-bottom-0 pt-4 pb-0">
-                                <h4 className="fw-bold text-primary mb-0">{editingId ? "Update Activity" : "Create New Activity"}</h4>
+                                <h4 className="fw-bold text-primary mb-0">{editingId ? "Update Activity" : "Create New Activity/ Project"}</h4>
                             </Card.Header>
                             <Card.Body>
                                 <Form onSubmit={handleSubmit}>
                                     <Form.Group className="mb-3">
-                                        <Form.Label className="fw-semibold">Activity Name</Form.Label>
+                                        <Form.Label className="fw-semibold">Activity/ Project Name</Form.Label>
                                         <CreatableSelect
                                             value={formData.project_name}
                                             onChange={(e) => setFormData({ ...formData, project_name: e.target.value })}
                                             options={Array.from(new Set(projects.map(p => p.project_name).filter(Boolean))).sort()}
                                             placeholder="Select or type activity name"
                                         />
+                                    </Form.Group>
+
+                                    <Form.Group className="mb-3">
+                                        <Form.Label className="fw-semibold">Activity Type</Form.Label>
+                                        <Form.Select
+                                            name="activity_type"
+                                            value={formData.activity_type}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="">Select Activity Type</option>
+                                            <option value="Project">Project</option>
+                                            <option value="Activity">Activity</option>
+                                            <option value="Internal Project">Internal Project</option>
+                                            <option value="Business Development Project">Business Development Project</option>
+                                            <option value="Others">Others</option>
+                                        </Form.Select>
                                     </Form.Group>
 
                                     <Form.Group className="mb-3">
@@ -326,7 +344,7 @@ export default function ActivitiesScreen({ onLogout }) {
 
                                     <div className="d-grid gap-2">
                                         <Button type="submit" variant="primary" className="fw-bold" disabled={submitting}>
-                                            {submitting ? <Spinner animation="border" size="sm" /> : (editingId ? "Update Activity" : "Create Activity")}
+                                            {submitting ? <Spinner animation="border" size="sm" /> : (editingId ? "Update Activity" : "Create")}
                                         </Button>
                                         {editingId && (
                                             <Button variant="outline-secondary" className="fw-bold" onClick={handleCancelEdit} disabled={submitting}>
@@ -343,7 +361,7 @@ export default function ActivitiesScreen({ onLogout }) {
                     <Col lg={8} md={12}>
                         <Card className="shadow-sm border-0 h-100" style={{ borderRadius: "4px" }}>
                             <Card.Header className="bg-white border-bottom-0 pt-4 pb-0">
-                                <h4 className="fw-bold text-dark mb-0">Existing Activities</h4>
+                                <h4 className="fw-bold text-dark mb-0">Existing Activities/ Projects</h4>
                             </Card.Header>
                             <Card.Body>
                                 {loading ? (
@@ -355,7 +373,8 @@ export default function ActivitiesScreen({ onLogout }) {
                                         <Table hover className="align-middle">
                                             <thead className="bg-light">
                                                 <tr>
-                                                    <th className="border-0">Activity</th>
+                                                    <th className="border-0">Activity/ Project</th>
+                                                    <th className="border-0">Type</th>
                                                     <th className="border-0">Leader</th>
                                                     <th className="border-0">Status</th>
                                                     <th className="border-0 text-end">Actions</th>
@@ -365,6 +384,15 @@ export default function ActivitiesScreen({ onLogout }) {
                                                 {projects.map((p) => (
                                                     <tr key={p.id} onClick={() => handleRowClick(p)} style={{ cursor: "pointer" }}>
                                                         <td className="fw-bold text-primary">{p.project_name}</td>
+                                                        <td>
+                                                            {p.activity_type ? (
+                                                                <span className="badge bg-light text-dark border" style={{ fontSize: "12px", fontWeight: "500" }}>
+                                                                    {p.activity_type}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-muted small">-</span>
+                                                            )}
+                                                        </td>
                                                         <td className="text-muted small">{p.leader_name}</td>
                                                         <td onClick={(e) => e.stopPropagation()}>
                                                             <Form.Select
@@ -421,7 +449,10 @@ export default function ActivitiesScreen({ onLogout }) {
                 <Modal.Body className="pt-2 pb-4 px-4">
                     <div className="text-center mb-4">
                         <h5 className="fw-bold text-primary mb-1">{selectedProject?.project_name}</h5>
-                        <small className="text-muted">Select an action below</small>
+                        {selectedProject?.activity_type && (
+                            <div className="badge bg-light text-secondary border mb-1">{selectedProject.activity_type}</div>
+                        )}
+                        <div><small className="text-muted">Select an action below</small></div>
                     </div>
 
                     {selectedProject && String(selectedProject.empid) !== String(user?.empid) && (

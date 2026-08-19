@@ -125,6 +125,7 @@ export default function InlineActivitiesScreen({ onLogout }) {
         setExpandedProjectId(project.id) // Ensure it's expanded
         setFormData({
             project_name: project.project_name,
+            activity_type: project.activity_type || "",
             leader_name: project.leader_name,
             description: project.description,
             required_skills: Array.isArray(project.required_skills) ? project.required_skills : JSON.parse(project.required_skills || "[]"),
@@ -463,6 +464,21 @@ export default function InlineActivitiesScreen({ onLogout }) {
                                         />
                                     </div>
                                     <div style={styles.editField}>
+                                        <label style={styles.editLabel}>Activity Type</label>
+                                        <select
+                                            style={styles.editInput}
+                                            value={formData.activity_type || ""}
+                                            onChange={e => setFormData({ ...formData, activity_type: e.target.value })}
+                                        >
+                                            <option value="">Select Activity Type</option>
+                                            <option value="Project">Project</option>
+                                            <option value="Activity">Activity</option>
+                                            <option value="Internal Project">Internal Project</option>
+                                            <option value="Business Development Project">Business Development Project</option>
+                                            <option value="Others">Others</option>
+                                        </select>
+                                    </div>
+                                    <div style={styles.editField}>
                                         <label style={styles.editLabel}>Leader Name</label>
                                         <input
                                             style={styles.editInput}
@@ -561,10 +577,25 @@ export default function InlineActivitiesScreen({ onLogout }) {
 
                                         {/* Project Name */}
                                         <div style={styles.cardTitle}>
-                                            <span style={{ display: "flex", alignItems: "center" }}>
-                                                <Icons.Folder />
-                                                <span style={{ marginRight: "6px" }}>Project:</span>
-                                                {p.project_name}
+                                            <span style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+                                                <span style={{ display: "inline-flex", alignItems: "center" }}>
+                                                    <Icons.Folder />
+                                                    <span style={{ marginRight: "6px" }}>Project:</span>
+                                                    {p.project_name}
+                                                </span>
+                                                {p.activity_type && (
+                                                    <span style={{
+                                                        fontSize: "11px",
+                                                        fontWeight: "500",
+                                                        color: "#475569",
+                                                        background: "#f1f5f9",
+                                                        border: "1px solid #e2e8f0",
+                                                        padding: "2px 8px",
+                                                        borderRadius: "12px"
+                                                    }}>
+                                                        {p.activity_type}
+                                                    </span>
+                                                )}
                                             </span>
                                         </div>
 
@@ -616,28 +647,49 @@ export default function InlineActivitiesScreen({ onLogout }) {
                                         </>
                                     )}
 
-                                    {/* Footer (End Date & Created By) */}
-                                    <div style={styles.footer}>
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
-                                            <span style={{ display: "flex", alignItems: "center" }}>
-                                                <Icons.Calendar />
-                                                Interest Window Ends: {p.end_date ? p.end_date.split("-").reverse().join("-") : ""}
-                                            </span>
-                                            {p.creator_name && (
-                                                <span style={{ display: "flex", alignItems: "center", color: "#6b7280" }}>
-                                                    <Icons.Creator />
-                                                    Created by: {p.creator_name}
+                                    {/* Footer (End Date, Created By, Contact Notice & Edit) */}
+                                    <div style={{ ...styles.footer, flexDirection: "column", alignItems: "stretch", gap: "8px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
+                                                <span style={{ display: "flex", alignItems: "center" }}>
+                                                    <Icons.Calendar />
+                                                    Interest Window Ends: {p.end_date ? p.end_date.split("-").reverse().join("-") : ""}
                                                 </span>
+                                                {p.creator_name && (
+                                                    <span style={{ display: "flex", alignItems: "center", color: "#6b7280" }}>
+                                                        <Icons.Creator />
+                                                        Created by: {p.creator_name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {isManager && expandedProjectId === p.id && String(p.empid) === String(user.empid) && (
+                                                <button
+                                                    style={{ ...styles.editBtn, padding: "6px 12px", fontSize: "12px" }}
+                                                    onClick={(e) => handleEditClick(e, p)}
+                                                >
+                                                    Edit
+                                                </button>
                                             )}
                                         </div>
-                                        {isManager && expandedProjectId === p.id && String(p.empid) === String(user.empid) && (
-                                            <button
-                                                style={{ ...styles.editBtn, padding: "6px 12px", fontSize: "12px" }}
-                                                onClick={(e) => handleEditClick(e, p)}
-                                            >
-                                                Edit
-                                            </button>
-                                        )}
+
+                                        {/* Contact on Teams notice */}
+                                        <div style={{
+                                            fontSize: "12px",
+                                            color: "#4338ca",
+                                            fontWeight: "500",
+                                            backgroundColor: "#eef2ff",
+                                            border: "1px solid #e0e7ff",
+                                            padding: "6px 10px",
+                                            borderRadius: "6px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "6px"
+                                        }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                            </svg>
+                                            <span>If interested, please contact the POC on Teams</span>
+                                        </div>
                                     </div>
                                 </>
                             )}
