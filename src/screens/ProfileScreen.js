@@ -34,7 +34,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
 
   const [empid, setEmpid] = useState("")
   const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [role, setRole] = useState("")
   const [otherRole, setOtherRole] = useState("")
 
@@ -46,11 +46,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
-
-
-
   const originalIdRef = React.useRef(null)
-
 
   // Initialize from prop
   useEffect(() => {
@@ -60,7 +56,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
 
     setEmpid(original)
     setName(employee.name || "")
-    setEmail(employee.email || "")
+    setUsername(employee.username || "")
     setRole(employee.role || "")
     setOtherRole(employee.otherRole || employee.other_role || "")
 
@@ -90,7 +86,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
           if (!obj) return
 
           setName((cur) => (cur ? cur : obj.name || ""))
-          setEmail((cur) => (cur ? cur : obj.email || ""))
+          setUsername((cur) => (cur ? cur : obj.username || ""))
           setRole((cur) => (cur ? cur : obj.role || ""))
           setOtherRole((cur) => (cur ? cur : obj.otherRole || obj.other_role || ""))
 
@@ -112,11 +108,9 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
   }, [employee])
 
   // Validation
-  const validateEmail = (v) => /^[a-zA-Z0-9]+\.[a-zA-Z0-9]+@tatatechnologies\.com$/i.test(v)
   const errors = {
     name: !name.trim() ? "Name is required" : "",
     empid: !empid.toString().trim() ? "Employee Id required" : "",
-    email: !validateEmail(email) ? "Email format Incorrect" : "",
     role: !role ? "Role required" : "",
     otherRole: role === "Other" && !otherRole.trim() ? "Enter role" : "",
     cluster: !clusterMode ? "Cluster required" : (clusterMode === "Multiple" && (!cluster1 || !cluster2) ? "Both clusters required" : ""),
@@ -160,7 +154,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
   }
 
   const handleSave = async () => {
-    // setTouched({ name: true, empid: true, email: true, role: true, otherRole: true, cluster: true })
+    // setTouched({ name: true, empid: true, username: true, role: true, otherRole: true, cluster: true })
     setError("")
 
     if (!isValid()) return setError("Fix errors before saving.")
@@ -178,7 +172,6 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
       const payload = {
         name: name.trim(),
         empid: empid.toString().trim(),
-        email: email.trim(),
         role: role === "Other" ? otherRole.trim() : role,
         otherRole: role === "Other" ? otherRole.trim() : "",
         cluster: finalCluster,
@@ -208,7 +201,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
       if (!serverRecord) throw new Error("Could not fetch record after save — check backend.")
 
       // Build profile-only object using serverRecord fields (non-destructive)
-      const profileKeys = ["empid", "name", "email", "role", "otherRole", "cluster", "cluster2", "updated_at"]
+      const profileKeys = ["empid", "name", "username", "role", "otherRole", "cluster", "cluster2", "updated_at"]
       const profileOnly = {}
       for (const k of profileKeys) {
         profileOnly[k] =
@@ -288,8 +281,8 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
               </Col>
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="fw-bold small text-muted">Email</Form.Label>
-                  <Form.Control value={email} onChange={(e) => setEmail(e.target.value)} disabled className="rounded-0" />
+                  <Form.Label className="fw-bold small text-muted">Username</Form.Label>
+                  <Form.Control value={username} disabled className="rounded-0" />
                 </Form.Group>
               </Col>
               <Col md={6}>

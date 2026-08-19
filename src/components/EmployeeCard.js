@@ -19,7 +19,6 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
     interests,
     previous_projects,
     role,
-    email,
     hours_available,
     from_date,
     to_date,
@@ -605,15 +604,6 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
     </svg>
   )
 
-
-
-  const IconMail = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M3 7.5v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M21 7.5l-9 6-9-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-
   const IconClock = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.2" />
@@ -1068,20 +1058,6 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
                           <span>{to_date ? formatDateDisplay(to_date) : "—"}</span>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Email */}
-                {email && (
-                  <div style={styles.section}>
-                    <div style={styles.infoRow}>
-                      <span style={styles.iconWrap}>
-                        <IconMail />
-                      </span>
-                      <a href={`mailto:${email}`} style={{ color: "#0b5fa5", textDecoration: "none", fontSize: "13px" }}>
-                        {email}
-                      </a>
                     </div>
                   </div>
                 )}

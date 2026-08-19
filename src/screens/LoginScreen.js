@@ -8,24 +8,16 @@ import { API_URL } from "../config";
 export default function LoginScreen({ onLogin }) {
     const navigate = useNavigate();
 
-    const [email, setEmail] = useState("");
+    const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-
         // Basic validation
-        if (!email || !password) {
+        if (!username || !password) {
             const msg = "Please fill in all required fields.";
-            toast.warn(msg);
-            return;
-        }
-
-        const emailRegex = /^[^\s@]+@tatatechnologies\.com$/;
-        if (!emailRegex.test(email)) {
-            const msg = "Please enter a valid email address.";
             toast.warn(msg);
             return;
         }
@@ -37,7 +29,7 @@ export default function LoginScreen({ onLogin }) {
             const response = await fetch(`${API_URL}${endpoint}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ username: username.trim(), password }),
             });
 
             const data = await response.json();
@@ -51,8 +43,6 @@ export default function LoginScreen({ onLogin }) {
 
             if (data.success) {
                 toast.success(`Welcome back, ${data.user.name || "User"}!`);
-
-
 
                 if (typeof onLogin === "function") onLogin(data.user);
 
@@ -97,16 +87,14 @@ export default function LoginScreen({ onLogin }) {
                             <h2 className="fw-bold mt-0" style={{ color: "#312e81", fontSize: "26px" }}>Login</h2>
                         </div>
 
-
-
                         <Form onSubmit={handleSubmit}>
-                            <Form.Group className="mb-3" controlId="formBasicEmail">
-                                <Form.Label className="fw-bold" style={{ color: "#374151" }}>Email Address</Form.Label>
+                            <Form.Group className="mb-3" controlId="formBasicUsername">
+                                <Form.Label className="fw-bold" style={{ color: "#374151" }}>Username</Form.Label>
                                 <Form.Control
-                                    type="email"
-                                    placeholder="Enter your email @tatatechnologies.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    type="text"
+                                    placeholder="Enter your username"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
                                     disabled={loading}
                                     className="p-3"
                                     style={{
