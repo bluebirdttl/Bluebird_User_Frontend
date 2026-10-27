@@ -231,28 +231,35 @@ export default function HomeScreen({ onLogout, employee }) {
     fetchProjects()
   }, [])
 
+  // helper to extract individual project names from any format
+  const extractProjects = (val) => {
+    if (!val) return []
+    if (Array.isArray(val)) return val.flatMap(extractProjects)
+    if (typeof val === "string") {
+      const s = val.trim()
+      if (!s) return []
+      try {
+        const parsed = JSON.parse(s)
+        if (Array.isArray(parsed)) return parsed.flatMap(extractProjects)
+        if (typeof parsed === "string" && parsed.trim()) return [parsed.trim()]
+      } catch { }
+      if (s.includes(",")) {
+        return s.split(",").map((p) => p.trim()).filter(Boolean)
+      }
+      return [s]
+    }
+    return []
+  }
+
   const allProjects = Array.from(
     new Set([
       ...dbProjects,
-      ...employees.flatMap((emp) => {
-        const projects = []
-        if (emp.current_project) projects.push(emp.current_project)
-        if (emp.currentProject) projects.push(emp.currentProject)
-        const rawPrev = emp.previous_projects || emp.previousProjects
-        if (Array.isArray(rawPrev)) {
-          projects.push(...rawPrev)
-        } else if (typeof rawPrev === "string") {
-          try {
-            const parsed = JSON.parse(rawPrev)
-            if (Array.isArray(parsed)) projects.push(...parsed)
-            else projects.push(rawPrev)
-          } catch {
-            if (rawPrev.includes(",")) projects.push(...rawPrev.split(","))
-            else projects.push(rawPrev)
-          }
-        }
-        return projects
-      })
+      ...employees.flatMap((emp) => [
+        ...extractProjects(emp.current_project),
+        ...extractProjects(emp.currentProject),
+        ...extractProjects(emp.previous_projects),
+        ...extractProjects(emp.previousProjects),
+      ])
     ])
   )
     .map((p) => (typeof p === "string" ? p.trim() : ""))

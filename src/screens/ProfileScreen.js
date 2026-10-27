@@ -20,6 +20,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
     { label: "Event Manager", value: "Event Manager" },
     { label: "Problem Solver", value: "Problem Solver" },
     { label: "Project Coordinator", value: "Project Coordinator" },
+    { label: "Other", value: "Other" },
   ]
 
   const CLUSTER = [
@@ -47,6 +48,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
   const [error, setError] = useState("")
 
   const originalIdRef = React.useRef(null)
+  const initialFetchDone = React.useRef(false)
 
   // Initialize from prop
   useEffect(() => {
@@ -72,10 +74,10 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
     }
   }, [employee])
 
-  // Non-destructive background refresh (only fill empty local fields)
+  // Non-destructive initial background refresh (only fill missing fields once)
   useEffect(() => {
     const id = originalIdRef.current
-    if (!id) return
+    if (!id || initialFetchDone.current) return
     const url = `${API_URL.replace(/\/$/, "")}/api/employees/${encodeURIComponent(id)}`
       ; (async () => {
         try {
@@ -85,6 +87,7 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
           const obj = Array.isArray(data) ? data[0] : data
           if (!obj) return
 
+          initialFetchDone.current = true
           setName((cur) => (cur ? cur : obj.name || ""))
           setUsername((cur) => (cur ? cur : obj.username || ""))
           setRole((cur) => (cur ? cur : obj.role || ""))
@@ -107,13 +110,13 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employee])
 
-  // Validation
+  // Validation: Role and Cluster can now be left blank
   const errors = {
     name: !name.trim() ? "Name is required" : "",
     empid: !empid.toString().trim() ? "Employee Id required" : "",
-    role: !role ? "Role required" : "",
-    otherRole: role === "Other" && !otherRole.trim() ? "Enter role" : "",
-    cluster: !clusterMode ? "Cluster required" : (clusterMode === "Multiple" && (!cluster1 || !cluster2) ? "Both clusters required" : ""),
+    role: "", // Optional: allowed to be blank
+    otherRole: role === "Other" && !otherRole.trim() ? "Please specify your role" : "",
+    cluster: clusterMode === "Multiple" && (!cluster1 || !cluster2) ? "Both clusters required when Multiple is selected" : "",
   }
   const isValid = () => !Object.values(errors).some(Boolean)
 
@@ -154,10 +157,10 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
   }
 
   const handleSave = async () => {
-    // setTouched({ name: true, empid: true, username: true, role: true, otherRole: true, cluster: true })
     setError("")
 
-    if (!isValid()) return setError("Fix errors before saving.")
+    const firstError = Object.values(errors).find(Boolean)
+    if (firstError) return setError(firstError)
 
     const originalId = originalIdRef.current
     if (!originalId) return setError("Missing original employee ID.")
@@ -166,16 +169,16 @@ export default function ProfileScreen({ employee = null, onBack, onSaveProfile, 
 
     try {
       // Determine final cluster values
-      let finalCluster = clusterMode === "Multiple" ? cluster1 : clusterMode;
+      let finalCluster = clusterMode === "Multiple" ? cluster1 : (clusterMode || "");
       let finalCluster2 = clusterMode === "Multiple" ? cluster2 : null;
 
       const payload = {
         name: name.trim(),
         empid: empid.toString().trim(),
-        role: role === "Other" ? otherRole.trim() : role,
+        role: role === "Other" ? otherRole.trim() : (role || ""),
         otherRole: role === "Other" ? otherRole.trim() : "",
-        cluster: finalCluster,
-        cluster2: finalCluster2,
+        cluster: finalCluster || "",
+        cluster2: finalCluster2 || null,
         updated_at: new Date().toISOString(),
       }
 

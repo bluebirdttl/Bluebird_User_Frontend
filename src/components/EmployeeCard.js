@@ -27,11 +27,29 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
   } = employee || {}
 
   // Initialize form data when entering edit mode
+  // Helper to parse current projects into array
+  const parseCurrentProjects = (val) => {
+    if (!val) return []
+    if (Array.isArray(val)) return val.map(x => String(x).trim()).filter(Boolean)
+    if (typeof val === "string") {
+      const s = val.trim()
+      if (!s) return []
+      try {
+        const p = JSON.parse(s)
+        if (Array.isArray(p)) return p.map(x => String(x).trim()).filter(Boolean)
+      } catch { }
+      if (s.includes(",")) return s.split(",").map(x => x.trim()).filter(Boolean)
+      return [s]
+    }
+    return []
+  }
+
   useEffect(() => {
     if (isEditing) {
       // console.log("EmployeeCard: Edit mode activated");
+      const cpList = parseCurrentProjects(employee.current_project || employee.currentProject)
       setFormData({
-        current_project: employee.current_project || employee.currentProject || "",
+        current_project: cpList.join(", "),
         availability: employee.availability || "Occupied",
         hours_available: employee.hours_available || employee.hoursAvailable || "",
         from_date: employee.from_date ? employee.from_date.split("T")[0] : (employee.fromDate || ""),
@@ -43,11 +61,11 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
     }
   }, [isEditing, employee])
 
-  // Enforce: No Project -> Available
   // Enforce: No Project -> Available, Project -> Not Available
   useEffect(() => {
     if (isEditing) {
-      if (!formData.current_project || !formData.current_project.trim()) {
+      const cpVal = String(formData.current_project || "").trim()
+      if (!cpVal) {
         // No project => Force Available
         if (formData.availability && formData.availability !== "Available") {
           setFormData(prev => ({ ...prev, availability: "Available" }))
@@ -121,6 +139,7 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
   const safeSkills = parseListField(current_skills)
   const safeInterests = parseListField(interests)
   const safePrevious = parseListField(previous_projects)
+  const safeCurrentProjects = parseCurrentProjects(employee.current_project || employee.currentProject)
 
   const getInitialsColor = (nm) => {
     const colors = ["#0072bc", "#d32f2f", "#2e7d32", "#f57c00", "#7b1fa2"]
@@ -309,8 +328,10 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
 
     setSaving(true)
     try {
+      const cpArray = parseCurrentProjects(formData.current_project)
       const payload = {
         ...formData,
+        current_project: cpArray,
         updated_at: new Date().toISOString(),
         // Ensure numbers
         hours_available: formData.availability === "Partially Available" ? Number(formData.hours_available) : null,
@@ -826,15 +847,15 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
                       style={styles.editInput}
                       value={formData.availability || "Occupied"}
                       onChange={e => setFormData({ ...formData, availability: e.target.value })}
-                      disabled={!formData.current_project || !formData.current_project.trim()}
+                      disabled={!String(formData.current_project || "").trim()}
                     >
-                      <option value="Available" disabled={!!(formData.current_project && formData.current_project.trim())}>Available</option>
+                      <option value="Available" disabled={!!String(formData.current_project || "").trim()}>Available</option>
                       <option value="Occupied">Occupied</option>
                       <option value="Partially Available">Partially Available</option>
                     </select>
                   </div>
                 </div>
-                {(!formData.current_project || !formData.current_project.trim()) && (
+                {!String(formData.current_project || "").trim() && (
                   <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "4px", paddingLeft: "4px" }}>
                     Requires Current Project to change availability
                   </div>
@@ -1059,6 +1080,20 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
                         </div>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Current Project(s) */}
+                {safeCurrentProjects && safeCurrentProjects.length > 0 && (
+                  <div style={styles.section}>
+                    <div style={styles.sectionTitle}>Current Project{safeCurrentProjects.length > 1 ? "s" : ""}</div>
+                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: "13px", color: "#374151" }}>
+                      {safeCurrentProjects.map((proj, idx) => (
+                        <li key={idx} style={{ marginBottom: safeCurrentProjects.length > 1 ? 4 : 0 }}>
+                          {proj}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
 

@@ -9,7 +9,7 @@ import CreatableSelect from "../components/CreatableSelect"
 
 export default function DetailScreen({ employee = null, onBack, onSaveDetails, onLogout, onProfile }) {
     // ---------- LOGIC (Original from User) ----------
-    const [currentProject, setCurrentProject] = useState("")
+    const [currentProjects, setCurrentProjects] = useState([""])
     const [noCurrentProject, setNoCurrentProject] = useState(false)
     const [availability, setAvailability] = useState("Occupied")
     const [hoursAvailable, setHoursAvailable] = useState("")
@@ -30,6 +30,50 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
 
     // Derived project list
     const [allProjects, setAllProjects] = useState([])
+
+    // helper to extract individual project names from any format (array, json string, comma-separated)
+    const extractProjects = (val) => {
+        if (!val) return []
+        if (Array.isArray(val)) return val.flatMap(extractProjects)
+        if (typeof val === "string") {
+            const s = val.trim()
+            if (!s) return []
+            try {
+                const parsed = JSON.parse(s)
+                if (Array.isArray(parsed)) return parsed.flatMap(extractProjects)
+                if (typeof parsed === "string" && parsed.trim()) return [parsed.trim()]
+            } catch { }
+            if (s.includes(",")) {
+                return s.split(",").map((p) => p.trim()).filter(Boolean)
+            }
+            return [s]
+        }
+        return []
+    }
+
+    // helper to parse current projects into string array
+    const parseProjectsList = (val) => {
+        if (!val) return []
+        if (Array.isArray(val)) {
+            return val.map((p) => (typeof p === "string" ? p.trim() : String(p).trim())).filter(Boolean)
+        }
+        if (typeof val === "string") {
+            const s = val.trim()
+            if (!s) return []
+            try {
+                const parsed = JSON.parse(s)
+                if (Array.isArray(parsed)) {
+                    return parsed.map((p) => (typeof p === "string" ? p.trim() : String(p).trim())).filter(Boolean)
+                }
+                if (typeof parsed === "string" && parsed.trim()) return [parsed.trim()]
+            } catch { }
+            if (s.includes(",")) {
+                return s.split(",").map((p) => p.trim()).filter(Boolean)
+            }
+            return [s]
+        }
+        return []
+    }
 
 
 
@@ -93,11 +137,12 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
     // populate detail fields from employee prop
     useEffect(() => {
         if (!employee) return
-        const cp = employee.current_project || employee.currentProject || ""
-        setCurrentProject(cp)
-        setNoCurrentProject(!cp)
+        const cpList = parseProjectsList(employee.current_project || employee.currentProject)
+        setCurrentProjects(cpList.length > 0 ? cpList : [""])
+        const hasProject = cpList.length > 0
+        setNoCurrentProject(!hasProject)
 
-        let av = employee.availability || "Occupied"
+        let av = employee.availability || (hasProject ? "Occupied" : "Available")
         // Expiry check
         if ((av === "Partially Available" || av.toLowerCase().includes("partial")) && (employee.to_date || employee.toDate)) {
             try {
@@ -134,8 +179,15 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                     const data = await res.json()
                     const obj = Array.isArray(data) ? data[0] || data : data
                     if (!obj) return
-                    setCurrentProject((cur) => (cur ? cur : obj.current_project || obj.currentProject || ""))
-                    setNoCurrentProject((cur) => (cur ? cur : !(obj.current_project || obj.currentProject || "")))
+                    const serverList = parseProjectsList(obj.current_project || obj.currentProject)
+                    setCurrentProjects((cur) => {
+                        if (cur && cur.some(p => p && p.trim())) return cur
+                        return serverList.length > 0 ? serverList : [""]
+                    })
+                    setNoCurrentProject((cur) => {
+                        if (currentProjects.some(p => p && p.trim())) return false
+                        return serverList.length === 0
+                    })
 
                     setAvailability((cur) => {
                         if (cur) return cur
@@ -196,29 +248,16 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                     console.warn("DetailScreen: Failed to fetch project cache:", e)
                 }
 
-                // 3. Merge
+                // 3. Merge: extract each project as separate projects in cache
                 const unique = Array.from(
                     new Set([
                         ...dbProjects,
-                        ...employees.flatMap((emp) => {
-                            const projects = []
-                            if (emp.current_project) projects.push(emp.current_project)
-                            if (emp.currentProject) projects.push(emp.currentProject)
-                            const rawPrev = emp.previous_projects || emp.previousProjects
-                            if (Array.isArray(rawPrev)) {
-                                projects.push(...rawPrev)
-                            } else if (typeof rawPrev === "string") {
-                                try {
-                                    const parsed = JSON.parse(rawPrev)
-                                    if (Array.isArray(parsed)) projects.push(...parsed)
-                                    else projects.push(rawPrev)
-                                } catch {
-                                    if (rawPrev.includes(",")) projects.push(...rawPrev.split(","))
-                                    else projects.push(rawPrev)
-                                }
-                            }
-                            return projects
-                        })
+                        ...employees.flatMap((emp) => [
+                            ...extractProjects(emp.current_project),
+                            ...extractProjects(emp.currentProject),
+                            ...extractProjects(emp.previous_projects),
+                            ...extractProjects(emp.previousProjects),
+                        ])
                     ])
                 )
                     .map((p) => (typeof p === "string" ? p.trim() : ""))
@@ -327,6 +366,31 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
         setDateError("")
     }
 
+    const handleProjectChange = (index, val) => {
+        const next = [...currentProjects]
+        next[index] = val
+        setCurrentProjects(next)
+        const hasProject = next.some((p) => p && p.trim().length > 0)
+        setNoCurrentProject(!hasProject)
+        if (hasProject && availability === "Available") {
+            setAvailability("Occupied")
+        }
+    }
+
+    const addProjectField = () => {
+        setCurrentProjects((prev) => [...prev, ""])
+    }
+
+    const removeProjectField = (index) => {
+        setCurrentProjects((prev) => {
+            const next = prev.filter((_, i) => i !== index)
+            const resolved = next.length > 0 ? next : [""]
+            const hasProject = resolved.some((p) => p && p.trim().length > 0)
+            setNoCurrentProject(!hasProject)
+            return resolved
+        })
+    }
+
     const handleSave = async () => {
         setError("")
         if (!employee || !employee.empid) {
@@ -348,10 +412,14 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
             return
         }
 
+        const cleanedProjects = currentProjects
+            .map((p) => (typeof p === "string" ? p.trim() : ""))
+            .filter(Boolean)
+
         setSavingState(true)
         try {
             const payload = {
-                current_project: noCurrentProject ? "" : (currentProject || ""),
+                current_project: noCurrentProject ? [] : cleanedProjects,
                 availability: effectiveAvailability,
                 hours_available: effectiveAvailability === "Partially Available" ? Number(hoursAvailable) : null,
                 from_date: effectiveAvailability === "Partially Available" ? (fromDate || null) : null,
@@ -406,7 +474,7 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                 const existing = JSON.parse(sessionStorage.getItem("user") || "{}")
                 const merged = {
                     ...existing,
-                    current_project: serverRecord.current_project ?? serverRecord.currentProject ?? "",
+                    current_project: serverRecord.current_project ?? serverRecord.currentProject ?? [],
                     availability: serverRecord.availability ?? "",
                     hours_available: serverRecord.hours_available ?? serverRecord.hoursAvailable ?? null,
                     from_date: serverRecord.from_date ?? serverRecord.fromDate ?? null,
@@ -419,6 +487,11 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                 sessionStorage.setItem("user", JSON.stringify(merged))
             } catch (e) {
                 console.warn("sessionStorage merge failed:", e)
+            }
+
+            // Update local allProjects cache immediately with newly added projects
+            if (cleanedProjects.length > 0) {
+                setAllProjects((prev) => Array.from(new Set([...prev, ...cleanedProjects])).sort())
             }
 
             onSaveDetails && onSaveDetails(serverRecord)
@@ -801,7 +874,9 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                         <div className="responsive-header">
                             <div style={styles.titleGroup}>
                                 <h1 className="responsive-page-title">{employee?.name || "Employee Details"}</h1>
-                                <p style={styles.pageSubtitle}>{employee?.role || "No role specified"} • {employee?.cluster || "No cluster"}</p>
+                                <p style={styles.pageSubtitle}>
+                                    {employee?.role || "No role specified"} • {employee?.cluster2 ? `${employee.cluster} & ${employee.cluster2}` : (employee?.cluster || "No cluster")}
+                                </p>
                             </div>
                             {/* Back button could go here if needed, but Navbar handles nav mostly */}
                         </div>
@@ -820,23 +895,173 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                                     <div style={styles.sectionTitle}>Professional Status</div>
 
                                     <div style={styles.formGroup}>
-                                        <label style={styles.label}>Current Project</label>
-                                        {/* Custom Creatable Select */}
-                                        <CreatableSelect
-                                            options={allProjects}
-                                            value={currentProject}
-                                            onChange={(e) => {
-                                                const val = e.target.value
-                                                setCurrentProject(val)
-                                                const hasProject = val && val.trim().length > 0
-                                                setNoCurrentProject(!hasProject)
-                                                if (hasProject && availability === "Available") {
-                                                    setAvailability("Occupied")
-                                                }
-                                            }}
-                                            placeholder="e.g. Project Alpha"
-                                        />
-                                        <div style={{ marginTop: "8px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                                            <label style={styles.label}>Current Project{currentProjects.length > 1 ? "s" : ""}</label>
+                                            <button
+                                                type="button"
+                                                onClick={addProjectField}
+                                                title="Add another current project"
+                                                style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "4px",
+                                                    padding: "3px 10px",
+                                                    fontSize: "12px",
+                                                    fontWeight: 600,
+                                                    color: "#2563eb",
+                                                    backgroundColor: "#eff6ff",
+                                                    border: "1px solid #bfdbfe",
+                                                    borderRadius: "6px",
+                                                    cursor: "pointer",
+                                                    transition: "all 0.15s ease",
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "#2563eb"
+                                                    e.currentTarget.style.color = "#ffffff"
+                                                    e.currentTarget.style.borderColor = "#2563eb"
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "#eff6ff"
+                                                    e.currentTarget.style.color = "#2563eb"
+                                                    e.currentTarget.style.borderColor = "#bfdbfe"
+                                                }}
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                </svg>
+                                                <span>Add Project</span>
+                                            </button>
+                                        </div>
+
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                            {currentProjects.map((proj, idx) => (
+                                                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <CreatableSelect
+                                                            options={allProjects}
+                                                            value={proj}
+                                                            onChange={(e) => handleProjectChange(idx, e.target.value)}
+                                                            placeholder={idx === 0 ? "e.g. Project Alpha" : `e.g. Current Project ${idx + 1}`}
+                                                        />
+                                                    </div>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                                        {idx === 0 ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={addProjectField}
+                                                                title="Add another current project"
+                                                                style={{
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    justifyContent: "center",
+                                                                    width: "42px",
+                                                                    height: "42px",
+                                                                    minWidth: "42px",
+                                                                    borderRadius: "8px",
+                                                                    border: `1px solid ${theme.border || "#cbd5e1"}`,
+                                                                    backgroundColor: "#f0f7ff",
+                                                                    color: "#2563eb",
+                                                                    cursor: "pointer",
+                                                                    transition: "all 0.2s ease",
+                                                                    padding: 0,
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = "#2563eb"
+                                                                    e.currentTarget.style.color = "#ffffff"
+                                                                    e.currentTarget.style.borderColor = "#2563eb"
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = "#f0f7ff"
+                                                                    e.currentTarget.style.color = "#2563eb"
+                                                                    e.currentTarget.style.borderColor = theme.border || "#cbd5e1"
+                                                                }}
+                                                            >
+                                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                                </svg>
+                                                            </button>
+                                                        ) : (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeProjectField(idx)}
+                                                                    title="Remove this current project"
+                                                                    style={{
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        justifyContent: "center",
+                                                                        width: "42px",
+                                                                        height: "42px",
+                                                                        minWidth: "42px",
+                                                                        borderRadius: "8px",
+                                                                        border: `1px solid ${theme.border || "#cbd5e1"}`,
+                                                                        backgroundColor: "#fef2f2",
+                                                                        color: "#dc2626",
+                                                                        cursor: "pointer",
+                                                                        transition: "all 0.2s ease",
+                                                                        padding: 0,
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        e.currentTarget.style.backgroundColor = "#dc2626"
+                                                                        e.currentTarget.style.color = "#ffffff"
+                                                                        e.currentTarget.style.borderColor = "#dc2626"
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        e.currentTarget.style.backgroundColor = "#fef2f2"
+                                                                        e.currentTarget.style.color = "#dc2626"
+                                                                        e.currentTarget.style.borderColor = theme.border || "#cbd5e1"
+                                                                    }}
+                                                                >
+                                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                                                    </svg>
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={addProjectField}
+                                                                    title="Add another current project"
+                                                                    style={{
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        justifyContent: "center",
+                                                                        width: "42px",
+                                                                        height: "42px",
+                                                                        minWidth: "42px",
+                                                                        borderRadius: "8px",
+                                                                        border: `1px solid ${theme.border || "#cbd5e1"}`,
+                                                                        backgroundColor: "#f0f7ff",
+                                                                        color: "#2563eb",
+                                                                        cursor: "pointer",
+                                                                        transition: "all 0.2s ease",
+                                                                        padding: 0,
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        e.currentTarget.style.backgroundColor = "#2563eb"
+                                                                        e.currentTarget.style.color = "#ffffff"
+                                                                        e.currentTarget.style.borderColor = "#2563eb"
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        e.currentTarget.style.backgroundColor = "#f0f7ff"
+                                                                        e.currentTarget.style.color = "#2563eb"
+                                                                        e.currentTarget.style.borderColor = theme.border || "#cbd5e1"
+                                                                    }}
+                                                                >
+                                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                                        <line x1="12" y1="5" x2="12" y2="19" />
+                                                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                                                    </svg>
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div style={{ marginTop: "10px" }}>
                                             <label style={styles.checkboxWrapper}>
                                                 <input
                                                     type="checkbox" disabled
@@ -845,7 +1070,7 @@ export default function DetailScreen({ employee = null, onBack, onSaveDetails, o
                                                         const checked = e.target.checked
                                                         setNoCurrentProject(checked)
                                                         if (checked) {
-                                                            setCurrentProject("")
+                                                            setCurrentProjects([""])
                                                         } else {
                                                             if (availability === "Available") {
                                                                 setAvailability("Occupied")
