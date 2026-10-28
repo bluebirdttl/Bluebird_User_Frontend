@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { toast } from "react-toastify"
-import { Button } from "react-bootstrap"
+import { Button, Modal } from "react-bootstrap"
 import { API_URL } from "../config"
 
 export default function EmployeeCard({ employee = {}, getInitials, currentUser, onRefresh, allProjects = [] }) {
@@ -612,6 +612,7 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
 
   const handleCardClick = (e) => {
     if (isEditing) return // Don't collapse if editing
+    if (showStarModal) return // Don't collapse if star modal is active
     e.stopPropagation()
     setExpanded(!expanded)
   }
@@ -632,8 +633,18 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
     </svg>
   )
 
-  const IconStar = () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  const IconStar = ({ filled = true, size = 18 }) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={filled ? "#fbbf24" : "none"}
+      stroke={filled ? "#f59e0b" : "#94a3b8"}
+      strokeWidth={filled ? "1.5" : "2"}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ transition: "fill 0.2s ease, stroke 0.2s ease" }}
+    >
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   )
@@ -646,31 +657,74 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
     setDisplayStars(stars || 0)
   }, [stars])
 
-  const handleStarChange = async (delta) => {
+  // Star Rating Modal State (for Managers)
+  const [showStarModal, setShowStarModal] = useState(false)
+  const [hoveredStar, setHoveredStar] = useState(0)
+  const [selectedStars, setSelectedStars] = useState(0)
+  const [isSubmittingStars, setIsSubmittingStars] = useState(false)
+
+  const handleOpenStarModal = (e) => {
+    e.stopPropagation()
     if (!isManager) return
+    setHoveredStar(0)
+    setSelectedStars(0)
+    setShowStarModal(true)
+  }
 
-    const currentStars = typeof displayStars === 'number' ? displayStars : (displayStars ? 1 : 0)
-    const newStarCount = Math.max(0, Math.min(100, currentStars + delta)) // Limit between 0 and 100
+  const handleGiveStars = async (starCount) => {
+    if (!isManager || isSubmittingStars) return
 
-    // Optimistic update
-    const previousStars = displayStars
-    setDisplayStars(newStarCount)
-    // console.log("Optimistic star update:", newStarCount);
+    setSelectedStars(starCount)
+    setIsSubmittingStars(true)
 
-    try {
+    const previousStars = typeof displayStars === 'number' ? displayStars : (Number(displayStars) || 0)
+    setDisplayStars(previousStars + starCount) // Optimistically add stars to current count
+
+    const mgrId = currentUser?.empid || currentUser?.id
+    const mgrName = currentUser?.name || currentUser?.username || "Manager"
+
+    // Fire API request in background
+    const updatePromise = (async () => {
       const url = `${API_URL}/api/employees/${employee.empid || employee.id}/stars`
       const res = await fetch(url, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stars: newStarCount })
+        body: JSON.stringify({
+          stars: starCount,
+          manager_id: mgrId,
+          manager_name: mgrName,
+          employee_name: name,
+        })
       })
-      if (!res.ok) throw new Error("Failed to update star count")
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.error || "Failed to update star count")
+      }
+      return res.json()
+    })()
+
+    // Keep selected stars yellow for at least 1 second (1000ms) before closing popup
+    try {
+      const [apiResult] = await Promise.all([
+        updatePromise,
+        new Promise((resolve) => setTimeout(resolve, 1000))
+      ])
+
+      if (apiResult?.data?.[0]?.stars !== undefined) {
+        setDisplayStars(apiResult.data[0].stars)
+      }
+
+      toast.success(`Successfully gave ${starCount} star${starCount > 1 ? "s" : ""} to ${name}!`)
       if (onRefresh) onRefresh()
     } catch (err) {
-
-      // Revert on failure
+      console.error("Star update error:", err)
       setDisplayStars(previousStars)
-      toast.error("Failed to update star count. Please try again.")
+      toast.error(err.message || "Failed to update stars. Please try again.")
+    } finally {
+      setShowStarModal(false)
+      setSelectedStars(0)
+      setHoveredStar(0)
+      setIsSubmittingStars(false)
     }
   }
 
@@ -764,52 +818,44 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                {/* Star Counter with Vertical Arrows */}
+                {/* Star Counter (clickable for managers to open star popup) */}
                 <div
+                  onClick={handleOpenStarModal}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "4px",
-                    background: "#fff",
-                    padding: "2px 6px",
-                    borderRadius: "6px",
-                    border: "1px solid #f1f5f9",
-                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                    gap: "6px",
+                    background: isManager ? "#fffdf5" : "#fff",
+                    padding: "3px 8px",
+                    borderRadius: "8px",
+                    border: isManager ? "1px solid #fde68a" : "1px solid #f1f5f9",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                    cursor: isManager ? "pointer" : "default",
+                    transition: "all 0.2s ease",
+                    userSelect: "none",
+                  }}
+                  title={isManager ? "Click to give stars" : `${displayStars || 0} stars`}
+                  onMouseEnter={(e) => {
+                    if (isManager) {
+                      e.currentTarget.style.background = "#fef3c7"
+                      e.currentTarget.style.borderColor = "#f59e0b"
+                      e.currentTarget.style.transform = "translateY(-1px)"
+                      e.currentTarget.style.boxShadow = "0 3px 6px rgba(245, 158, 11, 0.15)"
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (isManager) {
+                      e.currentTarget.style.background = "#fffdf5"
+                      e.currentTarget.style.borderColor = "#fde68a"
+                      e.currentTarget.style.transform = "translateY(0)"
+                      e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)"
+                    }
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    <span style={{ fontSize: "15px", fontWeight: "700", color: "#334155" }}>{displayStars}</span>
-                    <IconStar filled={displayStars > 0} />
-                  </div>
-
-                  {isManager && (
-                    <div className="d-flex flex-column gap-1">
-                      <Button
-                        variant="light"
-                        size="sm"
-                        className="p-0 border-0 d-flex align-items-center justify-content-center text-primary"
-                        style={{ width: "16px", height: "12px", lineHeight: 1 }}
-                        onClick={(e) => { e.stopPropagation(); handleStarChange(1); }}
-                        title="Increase"
-                      >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M18 15l-6-6-6 6" />
-                        </svg>
-                      </Button>
-                      <Button
-                        variant="light"
-                        size="sm"
-                        className="p-0 border-0 d-flex align-items-center justify-content-center text-secondary"
-                        style={{ width: "16px", height: "12px", lineHeight: 1 }}
-                        onClick={(e) => { e.stopPropagation(); handleStarChange(-1); }}
-                        title="Decrease"
-                      >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M6 9l6 6 6-6" />
-                        </svg>
-                      </Button>
-                    </div>
-                  )}
+                  <span style={{ fontSize: "14px", fontWeight: "700", color: "#334155" }}>
+                    {displayStars}
+                  </span>
+                  <IconStar filled={displayStars > 0} size={18} />
                 </div>
               </div>
             </div>
@@ -1160,6 +1206,117 @@ export default function EmployeeCard({ employee = {}, getInitials, currentUser, 
       }
 
       <div style={styles.footerHint}>Click to expand →</div>
+
+      {/* Star Rating Modal for Managers */}
+      {isManager && (
+        <Modal
+          show={showStarModal}
+          onHide={() => {
+            if (!isSubmittingStars) setShowStarModal(false)
+          }}
+          centered
+          size="sm"
+          onClick={(e) => e.stopPropagation()}
+          contentClassName="border-0 shadow-lg rounded-4 overflow-hidden"
+          style={{ zIndex: 1060 }}
+        >
+          <Modal.Header
+            closeButton={!isSubmittingStars}
+            className="border-bottom-0 pb-0 pt-3 px-3"
+          >
+            <Modal.Title style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a", width: "100%", textAlign: "center" }}>
+              Give Stars
+            </Modal.Title>
+          </Modal.Header>
+
+          <Modal.Body className="text-center px-3 pt-1 pb-4">
+            <div style={{ fontSize: "14px", fontWeight: 600, color: "#0072bc", marginBottom: "4px" }}>
+              {name}
+            </div>
+            <p style={{ fontSize: "12px", color: "#64748b", marginBottom: "16px" }}>
+              {isSubmittingStars
+                ? `Awarding ${selectedStars} star${selectedStars > 1 ? "s" : ""}...`
+                : "Click a star to rate (1 to 5 stars)"}
+            </p>
+
+            {/* 5 Stars row: Starts with all 5 blank */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "10px",
+                padding: "8px 0",
+              }}
+              onMouseLeave={() => {
+                if (!isSubmittingStars) setHoveredStar(0)
+              }}
+            >
+              {[1, 2, 3, 4, 5].map((starNum) => {
+                const isYellow = selectedStars > 0
+                  ? starNum <= selectedStars
+                  : starNum <= hoveredStar
+
+                return (
+                  <button
+                    key={starNum}
+                    type="button"
+                    disabled={isSubmittingStars}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleGiveStars(starNum)
+                    }}
+                    onMouseEnter={() => !isSubmittingStars && setHoveredStar(starNum)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: "4px",
+                      cursor: isSubmittingStars ? "default" : "pointer",
+                      outline: "none",
+                      transition: "transform 0.15s ease",
+                      transform: (hoveredStar === starNum || (selectedStars > 0 && starNum <= selectedStars))
+                        ? "scale(1.25)"
+                        : "scale(1)",
+                    }}
+                    title={`${starNum} Star${starNum > 1 ? "s" : ""}`}
+                    aria-label={`Give ${starNum} star${starNum > 1 ? "s" : ""}`}
+                  >
+                    <svg
+                      width="38"
+                      height="38"
+                      viewBox="0 0 24 24"
+                      fill={isYellow ? "#fbbf24" : "none"}
+                      stroke={isYellow ? "#f59e0b" : "#cbd5e1"}
+                      strokeWidth={isYellow ? "1.5" : "1.8"}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{
+                        transition: "fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease",
+                        filter: isYellow ? "drop-shadow(0 2px 6px rgba(251, 191, 36, 0.5))" : "none",
+                      }}
+                    >
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  </button>
+                )
+              })}
+            </div>
+
+            {selectedStars > 0 && (
+              <div
+                style={{
+                  marginTop: "12px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#d97706",
+                }}
+              >
+                ★ {selectedStars} Star{selectedStars > 1 ? "s" : ""} Given!
+              </div>
+            )}
+          </Modal.Body>
+        </Modal>
+      )}
     </div >
   )
 }
